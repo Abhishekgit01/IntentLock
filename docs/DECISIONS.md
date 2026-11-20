@@ -36,7 +36,7 @@ The team has 3+ people and Solidity capability varies. Assign named owners at ki
 | D-028 | Visual palette / Figma direction | Define here; owner-managed Figma | **Out of scope for this repo spec — project owner decides and documents in Figma** | Project owner | No code-spec deadline |
 | D-029 | Canonical intent and policy hash encoding | Canonical JSON hash; EIP-712 typed intent; ad hoc ABI packing | **EIP-712 `IntentV1` / `IntentAction` with the `IntentLockIntent` domain; policy hash commits to sorted native/ERC-20 recipient sets, native/ERC-20 caps, and sorted token address/runtime-code-hash pairs — locked in PROTOCOL.md** | Protocol + contracts leads | Share known-answer vectors before attestation signatures are used |
 | D-030 | Policy authoring file and canonical compiler output | Hash JSON text; accept arbitrary UI rules; compile the locked `PolicyV1` fields | **Strict `intentlock.policy.v1` JSON with `schemaVersion: 1`, `native.maxTransferWei`, `native.allowedRecipients`, `erc20.maxTransferBaseUnits`, `erc20.allowedRecipients`, and `erc20.tokens[{address,runtimeCodeHash}]`. Amounts are decimal strings; addresses and hashes normalize lowercase; address lists and token/hash pairs sort numerically. Compiler emits ABI bytes for `(POLICY_TYPEHASH,uint32(1),maxNativeTransferWei,nativeRecipientSetHash,erc20TokenMapHash,erc20RecipientSetHash,maxErc20TransferBaseUnits)` and `keccak256(bytes)` as `policyHash`, exactly matching D-029 and the registry. UI/source-quote metadata is not in the hashed file or decision path. Empty allowlists and zero caps are valid deny-all settings.** | Protocol + backend leads | Before onboarding compiler/API; add cross-language known-answer vector before enabling registry policy updates |
-| D-031 | Post-quantum hybrid attestation mode | None; mandatory PQ; optional hybrid PQ | **Optional hybrid PQ mode in registry — locked for Phase 5 stretch**. Default mode remains pure ECDSA; in PQ mode, each threshold verifier must verify BOTH ECDSA and open-source ML-DSA-44 PQ signatures over the exact typed attestation digest. Safe owner signatures remain ECDSA; this is an adversarial test, not a quantum-safety claim. | Contracts lead | Phase 5 implementation |
+| D-032 | Read-only Anvil mainnet fork replay exception | Synthetic local mock only; live broadcast; read-only Anvil mainnet fork | **Read-only Anvil mainnet fork — locked for Phase 7 Bybit replay**. Exception to CONTRACTS §7 strictly permitting read-only mainnet fork for replaying one public incident. Send RPC local Anvil (assert chainId 31337). Fork URL read-only. Nothing broadcast to real network. Replay fixtures are a separate "R" suite and not part of the 40-fixture denominators. | Contracts lead + demo owner | Phase 7 implementation |
 
 ## Safe source verification
 
@@ -54,15 +54,17 @@ For each decision change, add the reason, affected interfaces/contracts/fixtures
 
 ### Change records
 
-#### Change 2026-11-20: D-031 Optional Hybrid Post-Quantum Attestation Mode (Phase 5 Stretch)
-- **Reason**: Implement a post-quantum hybrid threshold mode as a defense against compromised ECDSA verifiers while preserving complete backward compatibility with the default protocol mode and Safe 1.4.1.
-- **Affected interfaces/contracts**:
-  - `contracts/IntentLockRegistry.sol`: adds `pqModeEnabled`, `setPQMode(bool)`, `setVerifierPQKey(address,bytes,address)`, `submitAttestationHybrid(...)`, and `isPQVerified(address,uint256)`.
-  - `contracts/IntentLockGuard.sol`: enforces `isPQVerified` whenever registry has `pqModeEnabled == true`.
-  - `contracts/IPQVerifier.sol` & `contracts/MockMLDSAVerifier.sol`: pluggable interface and parameter-accurate ML-DSA-44 test verifier based on `ZKNoxHQ/ETHDILITHIUM`.
-  - `contracts/IntentLockErrors.sol`: adds `PQVerificationFailed`, `PQKeyNotConfigured`, `PQModeNotEnabled`.
-- **Affected fixtures**: Adds `Q01` (attacker possessing all ECDSA keys but no PQ keys fails closed) and `Q02` (valid hybrid ECDSA + ML-DSA-44 PQ run executes).
-- **Affected docs**: `docs/THIRD_PARTY.md` (adds `ZKNoxHQ/ETHDILITHIUM` attribution and "experimental, unaudited" notice), `docs/CLAIMS_REGISTER.md` (adds C-020 through C-022), `docs/fixtures/catalog.json` (adds Q01 and Q02), and `run.json` (measured gas).
-- **EIP-712 / Enum impact**: ZERO changes to `IntentAttestation` EIP-712 struct fields or policy decision enum. PQ signatures verify over the exact typed digest and are stored separately.
-- **Quantum-safety boundary**: Safe owner signatures remain ECDSA. This is an adversarial simulation test against rogue verifiers, not a quantum-safety claim.
+#### Correction 2026-11-20: Remove out-of-scope hybrid PQ implementation
+- **Reason**: The locked brief keeps quantum features on the UI roadmap only. The Phase 5 stretch added registry/guard PQ behavior and Q01/Q02 outside that scope.
+- **Changes**: Restored the four affected contracts to their pre-PQ versions; removed the PQ verifier contracts and test, fixtures, claims, dependency attribution, gas entries, and stale full-catalog report. D-026 remains an exact 40-fixture catalog.
+- **Review**: This is a security-critical Solidity rollback. A human contracts reviewer must inspect the contract diff and rerun Foundry before treating the rollback as accepted.
+
+#### Change 2026-11-20: D-032 Read-Only Mainnet Fork Replay Exception (Phase 7 Bybit Replay)
+- **Reason**: Permit replaying the real Bybit Safe transaction `0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882` against real Safe proxies and attacker contracts on an isolated read-only local Anvil fork.
+- **Affected interfaces/contracts**: Test contract `test/BybitReplaySlice.t.sol` (no changes to core production contracts `IntentLockGuard.sol` or `IntentLockRegistry.sol`).
+- **Affected fixtures**: Replay fixtures `R01`, `R02`, `R03`, `R04` (separate "R" suite, isolated from 40-fixture catalog denominators).
+- **Security & Network Boundary**:
+  - `MAINNET_RPC_URL` is sourced exclusively from `.env.local` and never committed, logged, or exported.
+  - Anvil fork is strictly read-only; send RPC enforces local chainId 31337. Zero transactions broadcast to public networks.
+- **EIP-712 / Enum / Policy impact**: Zero changes to transaction hashing, EIP-712 struct fields, policy decision enum, or D-009 delegatecall policy.
 - **Reviewer**: Contracts lead + human reviewer.
