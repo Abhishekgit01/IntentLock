@@ -4,6 +4,8 @@
 !.env.example
 !.env.*.example
 *.intentlock-key
+*.intentlock-pq-key
+.intentlock-hybrid/
 
 # JavaScript dependencies and generated builds
 node_modules/

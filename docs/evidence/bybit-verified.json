@@ -45,9 +45,5 @@
       "codeLength": 2104,
       "codeNonEmpty": true
     }
-  },
-  "deterministicDecoder": {
-    "decision": "REFUSE_POLICY",
-    "reason": "DELEGATECALL prohibited by policy D-009"
   }
 }

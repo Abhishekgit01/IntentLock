@@ -423,10 +423,18 @@ export function createProposalService({ client, config, store }) {
         verifierThreshold: config.verifierThreshold,
         supportedActions: ['native.transfer', 'erc20.transfer'],
         registryConfigured: Boolean(config.registryAddress),
+        registryAddress: config.registryAddress ?? null,
+        verifierSetId: config.verifierSetId ?? null,
+        maxAttestationSeconds: config.maxAttestationSeconds,
         registrySubmissionAvailable: Boolean(config.registryAddress),
         safeExecutionAvailable: Boolean(
-          config.safeAddress && config.chainId === 31337,
+          config.safeAddress &&
+          config.registryAddress &&
+          config.relayerPrivateKey &&
+          config.chainId === 31337,
         ),
+        relayerConfigured: Boolean(config.relayerPrivateKey),
+        executionAdapter: 'local_anvil_signed_safe_transaction',
         dataRetention: 'in-memory; cleared on process restart',
       };
     },

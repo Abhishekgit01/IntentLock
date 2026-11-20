@@ -53,9 +53,25 @@ function loadArtifact(relativePath) {
   if (typeof bytecode !== "string" || bytecode.length < 4) {
     throw new Error(`${relativePath} has no creation bytecode.`);
   }
+  const runtimeBytecode = artifact.deployedBytecode?.object;
+  const rawMetadata = artifact.rawMetadata;
+  if (typeof runtimeBytecode !== "string" || typeof rawMetadata !== "string") {
+    throw new Error(`${relativePath} is missing runtime metadata.`);
+  }
+  const ipfsDigest = runtimeBytecode.match(
+    /646970667358221220([0-9a-f]{64})/i,
+  )?.[1];
+  if (!ipfsDigest) {
+    throw new Error(`${relativePath} has no Solidity IPFS metadata CID.`);
+  }
+  const ipfsHash = quais.encodeBase58(quais.getBytes(`0x1220${ipfsDigest}`));
+  if (ipfsHash.length !== 46) {
+    throw new Error(`${relativePath} has an invalid Solidity metadata CID.`);
+  }
   return {
     abi: artifact.abi,
     bytecode: bytecode.startsWith("0x") ? bytecode : `0x${bytecode}`,
+    ipfsHash,
   };
 }
 
@@ -83,6 +99,7 @@ async function deployContract(name, artifact, signer, args, transactions) {
     artifact.abi,
     artifact.bytecode,
     signer,
+    artifact.ipfsHash,
   );
   const contract = await factory.deploy(...args);
   const transaction = contract.deploymentTransaction();
@@ -129,6 +146,13 @@ async function deploySafe(wallet, artifacts, transactions) {
     0,
     ZERO,
   ]);
+  const { saltNonce: proxySaltNonce, predictedAddress: predictedSafeAddress } =
+    findCyprus1SafeProxySalt(
+      factoryAddress,
+      singletonAddress,
+      initializer,
+      artifacts.safeProxy.bytecode,
+    );
   const proxyFactoryContract = new quais.Contract(
     factoryAddress,
     artifacts.proxyFactory.abi,
@@ -137,7 +161,7 @@ async function deploySafe(wallet, artifacts, transactions) {
   const createProxyTx = await proxyFactoryContract.createProxyWithNonce(
     singletonAddress,
     initializer,
-    1,
+    proxySaltNonce,
   );
   const proxyBroadcast = recordBroadcast("safeProxy", createProxyTx);
   const proxyReceipt = await createProxyTx.wait();
@@ -158,14 +182,54 @@ async function deploySafe(wallet, artifacts, transactions) {
   }
   if (!safeAddress)
     throw new Error("Safe factory receipt had no ProxyCreation event.");
+  if (safeAddress.toLowerCase() !== predictedSafeAddress.toLowerCase()) {
+    throw new Error(
+      `Safe proxy address ${safeAddress} did not match the local CREATE2 prediction ${predictedSafeAddress}.`,
+    );
+  }
 
   return {
     safeAddress,
     owner,
     singletonAddress,
     factoryAddress,
+    proxySaltNonce,
+    safeAddress,
     safe: new quais.Contract(safeAddress, artifacts.safe.abi, wallet),
   };
+}
+
+function findCyprus1SafeProxySalt(
+  factoryAddress,
+  singletonAddress,
+  initializer,
+  proxyCreationBytecode,
+) {
+  const initCode = quais.concat([
+    proxyCreationBytecode,
+    quais.toBeHex(BigInt(singletonAddress), 32),
+  ]);
+  const initCodeHash = quais.keccak256(initCode);
+  const initializerHash = quais.keccak256(initializer);
+
+  for (let saltNonce = 1; saltNonce <= 100_000; saltNonce += 1) {
+    const salt = quais.keccak256(
+      quais.concat([initializerHash, quais.toBeHex(BigInt(saltNonce), 32)]),
+    );
+    const predictedAddress = quais.getCreate2Address(
+      factoryAddress,
+      salt,
+      initCodeHash,
+    );
+    if (
+      quais.getZoneForAddress(predictedAddress) === quais.Zone.Cyprus1 &&
+      !quais.isQiAddress(predictedAddress)
+    ) {
+      return { saltNonce, predictedAddress };
+    }
+  }
+
+  throw new Error("Could not find a Cyprus-1-valid Safe proxy CREATE2 salt.");
 }
 
 function verifierAddresses(value) {
@@ -231,6 +295,7 @@ async function main() {
 
   const artifacts = {
     safe: loadArtifact("Safe.sol/Safe.json"),
+    safeProxy: loadArtifact("SafeProxy.sol/SafeProxy.json"),
     proxyFactory: loadArtifact("SafeProxyFactory.sol/SafeProxyFactory.json"),
     registry: loadArtifact("IntentLockRegistry.sol/IntentLockRegistry.json"),
     guard: loadArtifact("IntentLockGuard.sol/IntentLockGuard.json"),
@@ -354,7 +419,7 @@ async function main() {
         "0x0000000000000000000000000000000000000001",
         10,
       ),
-      safeDeployment.safe.getStorageAt(BigInt(SAFE_GUARD_STORAGE_SLOT), 32),
+      safeDeployment.safe.getStorageAt(BigInt(SAFE_GUARD_STORAGE_SLOT), 1),
     ]);
     const installedSafeGuard = quais.getAddress(`0x${guardStorage.slice(-40)}`);
     if (
@@ -399,12 +464,19 @@ async function main() {
       safeSourceRef: "v1.4.1",
       safeCompilerVersion: "0.8.19",
       owner: safeDeployment.owner,
+      safeProxySaltNonce: safeDeployment.proxySaltNonce,
+      safeProxyPredictedAddress: safeDeployment.safeAddress,
       verifierSetId,
       verifiers,
       verifierThreshold: 2,
       policyHash,
       policyFile: path.relative(repositoryRoot, policyFile),
       policy: policyResult.policy,
+      compilerMetadataCids: Object.fromEntries(
+        Object.entries(artifacts)
+          .map(([name, artifact]) => [name, artifact.ipfsHash])
+          .filter(([name]) => name !== "safeProxy"),
+      ),
       contracts,
       transactions,
       postDeployment: {

@@ -1,25 +1,7 @@
-import {
-  createWalletClient,
-  http,
-  parseAbi,
-  keccak256,
-  encodeAbiParameters,
-} from 'viem';
+import { createWalletClient, http, parseAbi, isHex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { ATTESTATION_TYPES } from './attestations.js';
-import { getCanonicalSafeTxHash } from './safe.js';
+import { assertSafeReady, getCanonicalSafeTxHash } from './safe.js';
 import { appendEvent } from './events.js';
-
-// Disposable local-only Anvil development keys (CHAIN_ID 31337 ONLY)
-// Never hard-coded in frontend bundles or used on any production network
-const LOCAL_DEPLOYER_KEY =
-  '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-const LOCAL_OWNER_KEY =
-  '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d';
-const LOCAL_VERIFIER_KEYS = [
-  '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
-  '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
-];
 
 export const REGISTRY_ABI = parseAbi([
   'function submitAttestation((address safe,uint256 safeNonce,bytes32 safeTxHash,bytes32 intentHash,uint32 intentSchemaVersion,uint8 policyClass,bytes32 targetCodeHash,address resolvedImplementation,bytes32 implementationCodeHash,bytes32 policyHash,bytes32 verifierSetId,uint64 issuedAt,uint64 validUntil,bytes32 proposalId) attestation, bytes[] signatures) external',
@@ -30,113 +12,269 @@ export const EXEC_SAFE_ABI = parseAbi([
   'function execTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,bytes signatures) payable returns (bool)',
 ]);
 
-export async function executeProposalOnchain({ client, config, proposal }) {
-  if (config.chainId !== 31337) {
-    const error = new Error('On-chain execution adapter is local-only (chain 31337)');
-    error.code = 'UNSUPPORTED_CHAIN';
-    error.statusCode = 400;
-    throw error;
-  }
+function executionError(statusCode, code, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.code = code;
+  return error;
+}
 
-  const deployer = privateKeyToAccount(LOCAL_DEPLOYER_KEY);
-  const owner = privateKeyToAccount(LOCAL_OWNER_KEY);
-  const wallet = createWalletClient({
-    account: deployer,
-    transport: http(config.rpcUrl),
-  });
-
-  // Ensure verifier attestations are present for valid proposals
-  if (proposal.attestations.size < config.verifierThreshold) {
-    if (proposal.decoded.decision === 'ATTEST' || proposal.decoded.decision === 'ATTEST_WITH_TIMELOCK') {
-      const now = BigInt(Math.floor(Date.now() / 1000));
-      const attestation = {
-        safe: proposal.transaction.safe,
-        safeNonce: BigInt(proposal.transaction.safeNonce),
-        safeTxHash: proposal.safeTxHash,
-        intentHash: proposal.decoded.intentHash,
-        intentSchemaVersion: 1,
-        policyClass: proposal.decoded.policyClass,
-        targetCodeHash: proposal.decoded.targetCodeHash,
-        resolvedImplementation: proposal.decoded.intent.resolvedImplementation,
-        implementationCodeHash: proposal.decoded.intent.implementationCodeHash,
-        policyHash: proposal.policyHash,
-        verifierSetId: config.verifierSetId,
-        issuedAt: now,
-        validUntil: now + BigInt(config.maxAttestationSeconds),
-        proposalId: proposal.proposalId,
-      };
-
-      const domain = {
-        name: 'IntentLock',
-        version: '1',
-        chainId: config.chainId,
-        verifyingContract: config.registryAddress,
-      };
-
-      for (let i = 0; i < config.verifierThreshold; i++) {
-        const verifierAccount = privateKeyToAccount(LOCAL_VERIFIER_KEYS[i]);
-        const sig = await verifierAccount.signTypedData({
-          domain,
-          types: ATTESTATION_TYPES,
-          primaryType: 'IntentAttestation',
-          message: attestation,
-        });
-        proposal.attestations.set(verifierAccount.address.toLowerCase(), {
-          attestation,
-          signature: sig,
-        });
-      }
-      proposal.workflowStatus = 'APPROVED';
+function sameAttestation(left, right) {
+  const addressFields = ['safe', 'resolvedImplementation'];
+  const integerFields = [
+    'safeNonce',
+    'intentSchemaVersion',
+    'policyClass',
+    'issuedAt',
+    'validUntil',
+  ];
+  const fields = [
+    ...addressFields,
+    ...integerFields,
+    'safeTxHash',
+    'intentHash',
+    'targetCodeHash',
+    'implementationCodeHash',
+    'policyHash',
+    'verifierSetId',
+    'proposalId',
+  ];
+  return fields.every((field) => {
+    const a = left[field];
+    const b = right[field];
+    if (addressFields.includes(field)) {
+      return String(a).toLowerCase() === String(b).toLowerCase();
     }
+    if (integerFields.includes(field)) return BigInt(a) === BigInt(b);
+    return String(a).toLowerCase() === String(b).toLowerCase();
+  });
+}
+
+function requireLocalRelayer(config) {
+  if (config.chainId !== 31337) {
+    throw executionError(
+      400,
+      'UNSUPPORTED_CHAIN',
+      'The configured execution adapter only supports local Anvil chain 31337',
+    );
+  }
+  const rpc = new URL(config.rpcUrl);
+  if (!['localhost', '127.0.0.1', '::1', '[::1]'].includes(rpc.hostname)) {
+    throw executionError(
+      400,
+      'NONLOCAL_RPC',
+      'The execution relayer is restricted to a localhost Anvil RPC endpoint',
+    );
+  }
+  if (!config.relayerPrivateKey) {
+    throw executionError(
+      503,
+      'RELAYER_NOT_CONFIGURED',
+      'Set RELAYER_PRIVATE_KEY to a disposable local Anvil relayer key',
+    );
+  }
+  if (
+    !isHex(config.relayerPrivateKey, { strict: true }) ||
+    config.relayerPrivateKey.length !== 66
+  ) {
+    throw executionError(
+      500,
+      'RELAYER_KEY_INVALID',
+      'Configured relayer key is malformed',
+    );
+  }
+  return privateKeyToAccount(config.relayerPrivateKey);
+}
+
+function asRegistryAttestation(attestation) {
+  return {
+    ...attestation,
+    safeNonce: BigInt(attestation.safeNonce),
+    issuedAt: BigInt(attestation.issuedAt),
+    validUntil: BigInt(attestation.validUntil),
+  };
+}
+
+async function ensureRegistryAttestation({ client, wallet, config, proposal }) {
+  if (proposal.attestations.size < config.verifierThreshold) {
+    throw executionError(
+      409,
+      'VERIFIER_THRESHOLD_NOT_MET',
+      `Execution requires ${config.verifierThreshold} independently submitted verifier signatures`,
+    );
   }
 
-  let registryTxHash = null;
-  let registryBlockNumber = null;
-  let registryGasUsed = null;
+  const records = [...proposal.attestations.values()];
+  const first = records[0].attestation;
+  if (records.some((record) => !sameAttestation(first, record.attestation))) {
+    throw executionError(
+      409,
+      'ATTESTATION_MISMATCH',
+      'Verifier signatures do not bind the same attestation',
+    );
+  }
+  const signatures = records.map((record) => record.signature);
+  try {
+    const transactionHash = await wallet.writeContract({
+      address: config.registryAddress,
+      abi: REGISTRY_ABI,
+      functionName: 'submitAttestation',
+      args: [asRegistryAttestation(first), signatures],
+    });
+    const receipt = await client.waitForTransactionReceipt({
+      hash: transactionHash,
+    });
+    if (receipt.status !== 'success') {
+      throw executionError(
+        409,
+        'REGISTRY_SUBMISSION_FAILED',
+        'Registry attestation transaction reverted',
+      );
+    }
+    appendEvent(proposal, 'attestation.submitted_onchain', {
+      registryAddress: config.registryAddress,
+      transactionHash: receipt.transactionHash,
+      blockNumber: receipt.blockNumber.toString(),
+      gasUsed: receipt.gasUsed.toString(),
+      source: 'chain_receipt',
+    });
+    return receipt;
+  } catch (error) {
+    if (error.code === 'REGISTRY_SUBMISSION_FAILED') throw error;
 
-  // Step 1: Submit attestation to Registry if threshold is met and policy allows
-  if (proposal.attestations.size >= config.verifierThreshold) {
-    const firstAttestation = [...proposal.attestations.values()][0].attestation;
-    const signatures = [...proposal.attestations.values()].map((a) => a.signature);
-
+    // A prior request may already have submitted this exact record. Accept that
+    // state only after an RPC read proves the full record and threshold match.
     try {
-      registryTxHash = await wallet.writeContract({
+      const [onchain, signerCount, consumed] = await client.readContract({
         address: config.registryAddress,
         abi: REGISTRY_ABI,
-        functionName: 'submitAttestation',
-        args: [firstAttestation, signatures],
+        functionName: 'getAttestation',
+        args: [
+          proposal.transaction.safe,
+          BigInt(proposal.transaction.safeNonce),
+        ],
       });
-      const regReceipt = await client.waitForTransactionReceipt({ hash: registryTxHash });
-      registryBlockNumber = regReceipt.blockNumber.toString();
-      registryGasUsed = regReceipt.gasUsed.toString();
-
-      appendEvent(proposal, 'attestation.submitted_onchain', {
+      if (
+        !sameAttestation(first, onchain) ||
+        signerCount < BigInt(config.verifierThreshold) ||
+        consumed
+      ) {
+        throw executionError(
+          409,
+          'REGISTRY_STATE_MISMATCH',
+          'On-chain registry record does not match the proposal',
+        );
+      }
+      appendEvent(proposal, 'attestation.already_submitted_onchain', {
         registryAddress: config.registryAddress,
-        transactionHash: registryTxHash,
-        blockNumber: registryBlockNumber,
-        gasUsed: registryGasUsed,
+        signerCount: signerCount.toString(),
+        source: 'rpc_read',
       });
-    } catch (err) {
-      // Reverts during submission (e.g. already submitted or invalid)
-      console.warn('Registry submission notice:', err.shortMessage || err.message);
+      return null;
+    } catch (readError) {
+      if (readError.code === 'REGISTRY_STATE_MISMATCH') throw readError;
+      throw executionError(
+        503,
+        'REGISTRY_SUBMISSION_UNCONFIRMED',
+        `Could not submit or confirm the exact registry attestation: ${error.shortMessage || error.message}`,
+      );
     }
   }
+}
 
-  // Step 2: Sign and Execute Safe transaction
-  const safeTxHash = await getCanonicalSafeTxHash(
+export async function executeProposalOnchain({
+  client,
+  config,
+  proposal,
+  safeSignatures,
+}) {
+  if (proposal.decoded.decision === 'ATTEST_WITH_TIMELOCK') {
+    throw executionError(
+      501,
+      'TIMELOCK_NOT_IMPLEMENTED',
+      'The deployed backend does not implement the guard-replacement timelock execution flow',
+    );
+  }
+  if (proposal.decoded.decision !== 'ATTEST') {
+    throw executionError(
+      409,
+      'POLICY_DENIED',
+      'Only an ATTEST policy decision can be executed',
+    );
+  }
+  if (
+    typeof safeSignatures !== 'string' ||
+    !isHex(safeSignatures, { strict: true }) ||
+    safeSignatures.length < 132
+  ) {
+    throw executionError(
+      400,
+      'SAFE_SIGNATURES_REQUIRED',
+      'Provide the Safe owner signature bytes produced by an authorized signer; private keys are never accepted here',
+    );
+  }
+  if (!config.registryAddress) {
+    throw executionError(
+      503,
+      'REGISTRY_NOT_CONFIGURED',
+      'Registry address is not configured',
+    );
+  }
+  const registryCode = await client
+    .getBytecode({ address: config.registryAddress })
+    .catch(() => null);
+  if (!registryCode || registryCode === '0x') {
+    throw executionError(
+      503,
+      'REGISTRY_NOT_DEPLOYED',
+      'Configured registry has no code at the execution RPC',
+    );
+  }
+
+  const relayer = requireLocalRelayer(config);
+  const observedChainId = await client.getChainId();
+  if (observedChainId !== 31337) {
+    throw executionError(
+      409,
+      'CHAIN_MISMATCH',
+      `Execution RPC reports chain ${observedChainId}; expected local Anvil 31337`,
+    );
+  }
+  await assertSafeReady(client, config, observedChainId, config.safeAddress);
+  const wallet = createWalletClient({
+    account: relayer,
+    transport: http(config.rpcUrl),
+  });
+  const registryReceipt = await ensureRegistryAttestation({
+    client,
+    wallet,
+    config,
+    proposal,
+  });
+
+  const canonicalHash = await getCanonicalSafeTxHash(
     client,
     config.safeAddress,
     proposal.transaction,
   );
-  const ownerSignature = await owner.sign({ hash: safeTxHash });
+  if (canonicalHash.toLowerCase() !== proposal.safeTxHash.toLowerCase()) {
+    throw executionError(
+      409,
+      'DIGEST_MISMATCH',
+      'Live Safe digest no longer matches this proposal',
+    );
+  }
 
   appendEvent(proposal, 'execution.submitted', {
     safeAddress: config.safeAddress,
-    safeTxHash,
+    safeTxHash: canonicalHash,
+    relayer: relayer.address,
+    source: 'signed_safe_transaction',
   });
 
+  let transactionHash;
   try {
-    const execTx = await wallet.writeContract({
+    transactionHash = await wallet.writeContract({
       address: config.safeAddress,
       abi: EXEC_SAFE_ABI,
       functionName: 'execTransaction',
@@ -150,78 +288,53 @@ export async function executeProposalOnchain({ client, config, proposal }) {
         BigInt(proposal.transaction.gasPrice),
         proposal.transaction.gasToken,
         proposal.transaction.refundReceiver,
-        ownerSignature,
+        safeSignatures,
       ],
+      gas: BigInt(config.executionGasLimit),
     });
-
-    const execReceipt = await client.waitForTransactionReceipt({ hash: execTx });
-    const success = execReceipt.status === 'success';
-
-    appendEvent(proposal, success ? 'execution.succeeded' : 'execution.failed', {
-      transactionHash: execReceipt.transactionHash,
-      blockNumber: execReceipt.blockNumber.toString(),
-      gasUsed: execReceipt.gasUsed.toString(),
-      status: execReceipt.status,
+  } catch (error) {
+    appendEvent(proposal, 'execution.not_submitted', {
+      error: error.shortMessage || error.message,
+      source: 'rpc_error',
     });
-
-    proposal.workflowStatus = success ? 'EXECUTED' : 'EXECUTION_FAILED';
-    proposal.execution = {
-      attemptedOnchain: true,
-      readyForExecution: true,
-      gate: success ? 'EXECUTED' : 'EXECUTION_FAILED',
-      transactionHash: execReceipt.transactionHash,
-      blockNumber: execReceipt.blockNumber.toString(),
-      gasUsed: execReceipt.gasUsed.toString(),
-      observedRevert: null,
-      registryTransactionHash: registryTxHash,
-    };
-
-    return {
-      status: 'executed',
-      success,
-      transactionHash: execReceipt.transactionHash,
-      blockNumber: execReceipt.blockNumber.toString(),
-      gasUsed: execReceipt.gasUsed.toString(),
-      registryTransactionHash: registryTxHash,
-    };
-  } catch (revertErr) {
-    const errorMsg = revertErr.shortMessage || revertErr.message || 'Execution reverted';
-    let observedRevert = 'ExecutionReverted';
-    if (/UnsupportedOperation/i.test(errorMsg) || /0x5109f2d1/i.test(errorMsg)) {
-      observedRevert = 'UnsupportedOperation';
-    } else if (/PolicyDenied/i.test(errorMsg) || /0xf0b3c09f/i.test(errorMsg)) {
-      observedRevert = 'PolicyDenied';
-    } else if (/NoAttestation/i.test(errorMsg) || /0x028c5040/i.test(errorMsg)) {
-      observedRevert = 'NoAttestation';
-    } else if (/DigestMismatch/i.test(errorMsg) || /0x600f6b40/i.test(errorMsg)) {
-      observedRevert = 'DigestMismatch';
-    } else if (/AlreadyConsumed/i.test(errorMsg) || /0x0ebc8ea6/i.test(errorMsg)) {
-      observedRevert = 'AlreadyConsumed';
-    } else if (/PQVerificationFailed/i.test(errorMsg) || /0xdd38ec67/i.test(errorMsg)) {
-      observedRevert = 'PQVerificationFailed';
-    }
-
-    appendEvent(proposal, 'execution.failed', {
-      error: errorMsg,
-      observedRevert,
-    });
-
-    proposal.workflowStatus = 'EXECUTION_FAILED';
-    proposal.execution = {
-      attemptedOnchain: true,
-      readyForExecution: true,
-      gate: 'REVERTED_BY_GUARD',
-      transactionHash: null,
-      observedRevert,
-      registryTransactionHash: registryTxHash,
-    };
-
-    return {
-      status: 'reverted',
-      success: false,
-      observedRevert,
-      error: errorMsg,
-      registryTransactionHash: registryTxHash,
-    };
+    throw executionError(
+      409,
+      'EXECUTION_NOT_SUBMITTED',
+      error.shortMessage || error.message,
+    );
   }
+
+  const receipt = await client.waitForTransactionReceipt({
+    hash: transactionHash,
+  });
+  const success = receipt.status === 'success';
+  appendEvent(proposal, success ? 'execution.succeeded' : 'execution.failed', {
+    transactionHash: receipt.transactionHash,
+    blockNumber: receipt.blockNumber.toString(),
+    gasUsed: receipt.gasUsed.toString(),
+    status: receipt.status,
+    source: 'chain_receipt',
+  });
+
+  proposal.workflowStatus = success ? 'EXECUTED' : 'EXECUTION_FAILED';
+  proposal.execution = {
+    attemptedOnchain: true,
+    readyForExecution: true,
+    gate: success ? 'EXECUTED' : 'REVERTED_BY_GUARD',
+    transactionHash: receipt.transactionHash,
+    blockNumber: receipt.blockNumber.toString(),
+    gasUsed: receipt.gasUsed.toString(),
+    observedRevert: success ? null : 'ExecutionReverted',
+    registryTransactionHash: registryReceipt?.transactionHash ?? null,
+  };
+
+  return {
+    status: success ? 'executed' : 'reverted',
+    success,
+    transactionHash: receipt.transactionHash,
+    blockNumber: receipt.blockNumber.toString(),
+    gasUsed: receipt.gasUsed.toString(),
+    observedRevert: success ? null : 'ExecutionReverted',
+    registryTransactionHash: registryReceipt?.transactionHash ?? null,
+  };
 }

@@ -37,6 +37,9 @@ export default function Home() {
                 <ArrowLink to="/verifiers" variant="ghost" className="!px-8 !py-4 text-lg">
                   See how it works
                 </ArrowLink>
+                <ArrowLink to="/onboard" variant="ghost" className="!px-8 !py-4 text-lg">
+                  Open Policy Studio
+                </ArrowLink>
               </div>
             </Reveal>
           </div>

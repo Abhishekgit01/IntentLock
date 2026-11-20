@@ -5,8 +5,8 @@ export type PolicyDecision =
   | "REFUSE_POLICY";
 
 export type RuleTag = "ENFORCEABLE" | "PARTIAL" | "NOT_ENFORCEABLE";
-export type DataSource = "backend" | "preview";
-export type PolicyTemplateId = "sample" | "deny-all" | "native-only";
+export type DataSource = "backend";
+export type PolicyTemplateId = "sample";
 
 export interface PolicyFile {
   schema: "intentlock.policy.v1";

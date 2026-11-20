@@ -253,3 +253,11 @@ Do not claim an event records a failed pre-hook if the whole transaction revert 
 ## 9. Digest test vectors
 
 Before integration, create fixtures with fixed chain ID, Safe domain/version, Safe address, nonce, all Safe transaction fields, intent fields, policy hash, verifier-set ID, timestamps, and signatures. Check outputs in at least two independent implementations (for example, Solidity and viem). Include one-field mutation vectors proving each changed field changes the signed digest.
+
+## 10. Experimental off-chain hybrid signature envelope
+
+Per D-034, the CLI can create an experimental envelope containing an ECDSA-secp256k1 signature and an ML-DSA-65 (FIPS 204) signature over the same canonical `IntentAttestation` EIP-712 digest. The ML-DSA signature uses the fixed context `IntentLock Hybrid Verifier Prototype v1`. The envelope carries the exact domain and attestation so a verifier recomputes the digest instead of trusting the serialized digest field.
+
+The CLI also requires a trusted public-key descriptor and confirms that both the recovered ECDSA address and ML-DSA public-key fingerprint match that descriptor. Descriptor distribution and verifier membership remain out of band; this prototype does not add PQ keys to the on-chain verifier set.
+
+This envelope is not accepted by the API or registry, is not submitted on-chain, and does not affect whether the current guard authorizes execution. The production-like path remains ECDSA-only. It does not protect Safe owner signatures, registry administration, or chain execution from quantum attacks. Do not describe it as a post-quantum-secure wallet or on-chain hybrid authorization.

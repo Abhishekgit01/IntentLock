@@ -78,7 +78,11 @@ Safe-specific scope is pinned to Safe Smart Account `v1.4.1`: its standard trans
 
 Allowed: “In this pinned local-chain prototype, the tested delegatecall is unconditionally blocked, a separate CALL is blocked without the configured verifier threshold for its exact supported intent, and the valid transfer fixture succeeds.”
 
+Allowed for the experimental D-034 CLI only: “The off-chain prototype can verify ECDSA and ML-DSA-65 signatures over the same IntentLock attestation digest against a trusted public-key descriptor.”
+
 Not allowed without additional evidence: “IntentLock prevents all malicious transactions,” “the Safe cannot be drained,” “universal semantic verification,” “module-proof” absent exact module tests, “audited,” “production-ready,” or “court-admissible.”
+
+Not allowed for D-034: “on-chain post-quantum protection,” “quantum-safe Safe,” or “the registry/guard enforces ML-DSA.” The experimental envelope is off-chain and does not gate execution.
 
 ## 8. Security review checklist
 

@@ -1,0 +1,124 @@
+{
+  "generatedAt": "2026-11-20T20:00:59.572Z",
+  "network": "Quai Orchard Cyprus-1",
+  "chainId": 15000,
+  "rpcEndpoint": "https://orchard.rpc.quai.network",
+  "observedBlockNumber": 1877879,
+  "compiler": "0.8.19",
+  "evmVersion": "london",
+  "safeVersion": "1.4.1",
+  "safeSourceRef": "v1.4.1",
+  "safeCompilerVersion": "0.8.19",
+  "owner": "0x0029c1dA8b518f6fDa2e71af153c18f0401e250b",
+  "safeProxySaltNonce": 322,
+  "safeProxyPredictedAddress": "0x0056b3F4Ece03649932DBC6126C41002dA279d6e",
+  "verifierSetId": "0x21dd06fb89dad8515eb74018797ed73aa98524530db470664ea49d31b9d06d35",
+  "verifiers": [
+    "0x007577481C48938249e947614e60baDb6Da1c0a6",
+    "0x0008F7211eF802A0560b8c3ef9863eFe7c4e3b0F",
+    "0x0003230e9F3f9d60D0C1f7bf4eBC3D58c4Ac8871"
+  ],
+  "verifierThreshold": 2,
+  "policyHash": "0x8014eb7368a97e2402b9072760d725d2591cf23d754c704b23ca41ddb18c0781",
+  "policyFile": "quai/policy.orchard.json",
+  "policy": {
+    "schema": "intentlock.policy.v1",
+    "schemaVersion": 1,
+    "native": {
+      "maxTransferWei": "100000000000000000000",
+      "allowedRecipients": [
+        "0x00357c4b4f456f7015a73770e5587263f72b49fc"
+      ]
+    },
+    "erc20": {
+      "maxTransferBaseUnits": "0",
+      "allowedRecipients": [],
+      "tokens": []
+    }
+  },
+  "compilerMetadataCids": {
+    "safe": "QmWEyvEzxcoMTSAdtyN8gPAqnN99esn2WdxHDoGMHVFFr9",
+    "safeProxyFactory": "QmQaJnrE3vBQYoedQSN4xoE2td7NtMbnPWBACzFUpJpKJG",
+    "registry": "QmTcSGdxojaVigFSStTZWAQUgXjNwb9v1GY83ip6HdrGsq",
+    "guard": "QmNNs5xSrqJ1YF1ykGxF8QK63WEcRX97uxDeZBKqSoRtVR"
+  },
+  "contracts": {
+    "safeSingleton": {
+      "address": "0x0013164D695ba662B8Dd49f5c02E19F454a1Dec3",
+      "runtimeCodeHash": "0x08283cd52696d4fd62bfb8dad11d0eff4c408b0e9c9215928c23f06c5a2faafe"
+    },
+    "safeProxyFactory": {
+      "address": "0x0000E93E389d0B7f8A4A951c71BF3A93AEC9A967",
+      "runtimeCodeHash": "0xa9857b85a10429931906e6f011a023165057d854b622ad0dcd6769ef4c598910"
+    },
+    "safe": {
+      "address": "0x0056b3F4Ece03649932DBC6126C41002dA279d6e",
+      "runtimeCodeHash": "0x1b1f1277c4567ad6ec549b6b81a375e6ba4025c2b0267147a5e574e1659e771e"
+    },
+    "registry": {
+      "address": "0x000AbC550b505b67B4C7519Ea6D77c6E69C0F3e1",
+      "runtimeCodeHash": "0xb79a2ab1a63e520515193a3a445d880ecd26c7d4c80e3bc9dead861ca268b9f8"
+    },
+    "guard": {
+      "address": "0x00259AE951b71FDE20D05Bff94b93d66c5e48c2d",
+      "runtimeCodeHash": "0x7ec3768876e0a70aaf7301035bf0ae11515786e4b35dcb2281494cb742d05028"
+    }
+  },
+  "transactions": {
+    "safeSingleton": {
+      "transactionHash": "0x0030006b402f53fe4cb390c4b1b4b3a92549a1ae9c1231adf13a353c4bea096d",
+      "blockNumber": 8305648,
+      "gasUsed": "2792896",
+      "status": 1
+    },
+    "safeProxyFactory": {
+      "transactionHash": "0x0045000883cd0ceff1184fff0d203277964c9274ad847038a10d8c8f66024442",
+      "blockNumber": 8305650,
+      "gasUsed": "502306",
+      "status": 1
+    },
+    "safeProxy": {
+      "transactionHash": "0x0051001a733012f4cf37f7670eb9ca1c2257390167ccf7482c129821b7043f87",
+      "blockNumber": 8305652,
+      "gasUsed": "214822",
+      "status": 1
+    },
+    "registry": {
+      "transactionHash": "0x003f003215ea6b60d403fdac713a22eeeaa1d6ed895e6552c43e5f4258dc9b38",
+      "blockNumber": 8305654,
+      "gasUsed": "1869495",
+      "status": 1
+    },
+    "guard": {
+      "transactionHash": "0x000900250aa9b3fb27f8957beab4645555c1d68e634b59d5149bafc272ca9cf4",
+      "blockNumber": 8305657,
+      "gasUsed": "955213",
+      "status": 1
+    },
+    "registryGuard": {
+      "transactionHash": "0x0011006eb57744531a8beb4cbfad93b6801580f30e000442149dc31941a1278c",
+      "blockNumber": 8305659,
+      "gasUsed": "48422",
+      "status": 1
+    },
+    "safeGuard": {
+      "transactionHash": "0x001c003ad3e01f27804493d8a6a049c7737b904fb35d758931964e7a6086c51d",
+      "blockNumber": 8305661,
+      "gasUsed": "89411",
+      "status": 1
+    }
+  },
+  "postDeployment": {
+    "registryOwner": "0x0029c1dA8b518f6fDa2e71af153c18f0401e250b",
+    "registryGuard": "0x00259AE951b71FDE20D05Bff94b93d66c5e48c2d",
+    "safeGuard": "0x00259AE951b71FDE20D05Bff94b93d66c5e48c2d",
+    "safeOwners": [
+      "0x0029c1dA8b518f6fDa2e71af153c18f0401e250b"
+    ],
+    "safeThreshold": 1,
+    "enabledModules": [],
+    "safeNonce": 1,
+    "guardInstalledEventObserved": true
+  },
+  "explorerVerification": "not_checked"
+}

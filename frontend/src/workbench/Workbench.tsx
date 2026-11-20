@@ -55,10 +55,14 @@ function NoWebGL() {
 function HudStamp({
   kind,
   revert,
+  title,
+  subtitle,
   reduced,
 }: {
   kind: StampKind;
   revert?: string;
+  title?: string;
+  subtitle?: string;
   reduced: boolean;
 }) {
   const color = kind === "ok" ? "#7ACB8A" : "#FF3B30";
@@ -74,9 +78,11 @@ function HudStamp({
       className="pointer-events-none shrink-0 rounded-lg border-[3px] bg-[#0b0a08]/92 px-4 py-2 text-center backdrop-blur"
     >
       <p className="font-display text-2xl font-extrabold uppercase leading-none tracking-[0.06em] md:text-3xl">
-        {text.title}
+        {title ?? text.title}
       </p>
-      <p className="mt-1 font-mono text-[11px] font-bold tracking-wider">{revert ?? text.sub}</p>
+      <p className="mt-1 font-mono text-[11px] font-bold tracking-wider">
+        {revert ?? subtitle ?? text.sub}
+      </p>
       {revert && (
         <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em]">{text.sub}</p>
       )}
@@ -88,10 +94,20 @@ export default function Workbench() {
   const wb = useWorkbench();
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
-  const [tab, setTab] = useState<InspectorTab>("Checks");
+  const [tab, setTab] = useState<InspectorTab>("Timeline");
   useEffect(() => {
     setWebgl(detectWebGL());
   }, []);
+
+  // Escape skips the tour. Keep this hook above conditional loading/error returns.
+  useEffect(() => {
+    if (wb.tourStep === null) return;
+    const on = (e: KeyboardEvent) => {
+      if (e.key === "Escape") wb.endTour();
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [wb.tourStep, wb.endTour, wb]);
 
   if (wb.evidenceState === "loading") {
     return (
@@ -124,16 +140,6 @@ export default function Workbench() {
       </main>
     );
   }
-
-  // Escape skips the tour
-  useEffect(() => {
-    if (wb.tourStep === null) return;
-    const on = (e: KeyboardEvent) => {
-      if (e.key === "Escape") wb.endTour();
-    };
-    window.addEventListener("keydown", on);
-    return () => window.removeEventListener("keydown", on);
-  }, [wb.tourStep, wb.endTour, wb]);
 
   const caption =
     wb.tourStep !== null && wb.runStatus !== "running"
@@ -222,6 +228,24 @@ export default function Workbench() {
                 <HudStamp
                   kind={wb.derived.stamp}
                   revert={wb.derived.stamp === "revert" ? wb.derived.result?.revert : undefined}
+                  title={
+                    wb.derived.receipt.source === "chain"
+                      ? wb.derived.stamp === "revert"
+                        ? "RECORDED REVERT"
+                        : "RECORDED SUCCESS"
+                      : wb.derived.receipt.source === "simulation"
+                        ? wb.derived.stamp === "revert"
+                          ? "FOUNDRY TEST REVERTED"
+                          : "FOUNDRY TEST PASSED"
+                        : "ILLUSTRATIVE RUN"
+                  }
+                  subtitle={
+                    wb.derived.receipt.source === "simulation"
+                      ? "local fork test · no mined transaction"
+                      : wb.derived.receipt.source === "chain"
+                        ? "recorded chain observation"
+                        : "illustrative scenario"
+                  }
                   reduced={wb.reducedMotion}
                 />
               )}

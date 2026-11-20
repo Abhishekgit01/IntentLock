@@ -39,7 +39,7 @@ function decimal(value) {
   return typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value);
 }
 
-function normalizeAttestation(input) {
+export function normalizeAttestation(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     fail(400, 'INVALID_ATTESTATION', 'attestation must be an object');
   }

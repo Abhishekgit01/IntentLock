@@ -1,8 +1,16 @@
 # IntentLock Quai deployment package
 
-This package adds a separate Quai Orchard Cyprus-1 build and deployment path for the existing IntentLock contracts. It does not create a sample token and does not replace the Anvil workflow.
+This package builds and deploys the existing IntentLock contracts to Quai Orchard Cyprus-1. It does not create the sample token from the generic organizer skill and does not replace the local Anvil workflow.
 
-## Commands
+## Current status
+
+The Safe 1.4.1 singleton, Safe proxy factory, Safe proxy, IntentLock Registry, and IntentLock Guard are deployed. All seven deployment/configuration receipts and the read-back state are recorded in [`../deployments/quai-orchard-cyprus1.json`](../deployments/quai-orchard-cyprus1.json). Quaiscan source verification is still marked `not_checked`.
+
+The backend execution adapter remains local-Anvil-only. Do not set `CHAIN_ID=15000` and assume it will execute on Quai. A live verifier-to-Safe transaction has not been tested on Orchard.
+
+## Build and read-only commands
+
+Requirements: Node.js `24.22.1`, npm `11.19.1`, Foundry, and the backend dependencies for the shared policy compiler.
 
 ```sh
 cd ../backend
@@ -14,8 +22,10 @@ npm run policy:compile
 npm run preflight
 ```
 
-`compile:orchard` compiles the existing contract sources using Solidity 0.8.19 and London EVM into `../out-quai/`. `preflight` makes read-only RPC requests to the official Orchard endpoint and requires observed chain ID 15000. Neither command uses a private key or broadcasts.
+`compile:orchard` compiles Solidity `0.8.19` for the London EVM into `../out-quai/`. `policy:compile` prints the Orchard policy hash. `preflight` makes read-only calls and requires chain ID `15000`. These commands do not broadcast.
 
-The deploy script is deliberately gated. It requires a dedicated local `.env.quai`, exactly three verifier public addresses, a policy file compiled by the shared backend policy compiler (so install `backend/` dependencies with `npm ci` first), a funded testnet wallet, and `ALLOW_ORCHARD_BROADCAST=YES`. The compiler does not read or print the deployment key. Do not set the broadcast gate until the team has reviewed the exact source/artifact hashes, arguments, Safe owner/admin powers, and code; the project instructions also require a second human contracts reviewer. The command has not been run against Orchard.
+## Deployment warning
 
-See [the deployment guide](../docs/QUAI_ORCHARD.md) for configuration and limits. The backend and frontend still target the existing local Anvil instance; changing their runtime network is a separate integration step and must use actual Orchard deployment addresses, verifier keys, and observed RPC state.
+`npm run deploy:orchard` sends transactions and deploys a **new** stack of contracts. Do not run it to inspect the existing deployment. It requires the ignored local `quai/.env.quai`, three public verifier addresses, a funded dedicated test wallet, and `ALLOW_ORCHARD_BROADCAST=YES`. The deployment key and verifier signing keys must remain in ignored local files and must never be passed on a command line or committed.
+
+Read [the Orchard deployment guide](../docs/QUAI_ORCHARD.md) before any public-chain operation. It records the remaining source verification and end-to-end test work. The Foundry/Quais/Quaiscan workflow is described in [Quai's Foundry guide](https://www.qu.ai/integrations/foundry).

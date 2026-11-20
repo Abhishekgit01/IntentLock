@@ -24,10 +24,10 @@ import {
   type LiveProposal,
 } from "./backend";
 import { loadReplayData } from "../replay/loader";
-import { adaptReplayToScene } from "../replay/adapter";
+import { adaptReplayToScene, replayDurationMs } from "../replay/adapter";
 import type { ReplayData, ReplayRunKey } from "../replay/types";
 
-export type RunStatus = "idle" | "running" | "done";
+export type RunStatus = "idle" | "running" | "paused" | "done";
 const TICK_MS = 80;
 
 export function usePrefersReducedMotion() {
@@ -47,6 +47,7 @@ export function usePrefersReducedMotion() {
 
 export interface Workbench {
   reducedMotion: boolean;
+  evidenceState: "loading" | "ready" | "unavailable";
   mode: Mode;
   ref: RunRef;
   runStatus: RunStatus;
@@ -61,6 +62,11 @@ export interface Workbench {
   crateOpen: boolean;
   tourStep: number | null;
   badges: readonly string[];
+  replayEvents: ReturnType<typeof adaptReplayToScene>["events"];
+  reportedLabel: string | null;
+  reportedTag: string;
+  replaySignerCount: number | null;
+  replaySafeTransactionCount: number | null;
   replayData: ReplayData | null;
   activeReplayRun: ReplayRunKey;
   chooseReplayRun: (key: ReplayRunKey) => void;
@@ -89,8 +95,8 @@ export interface Workbench {
   tourNext: () => void;
   tourBack: () => void;
   endTour: () => void;
-  analyzeLive: () => Promise<void>;
-  executeLive: () => Promise<void>;
+  analyzeLive: (transaction: Record<string, unknown>) => Promise<void>;
+  executeLive: (safeSignatures: string) => Promise<void>;
 }
 
 export function useWorkbench(): Workbench {
@@ -105,14 +111,22 @@ export function useWorkbench(): Workbench {
   const [crateOpen, setCrateOpen] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
   const [replayData, setReplayData] = useState<ReplayData | null>(null);
+  const [evidenceState, setEvidenceState] = useState<Workbench["evidenceState"]>("loading");
   const [activeReplayRun, setActiveReplayRun] = useState<ReplayRunKey>("runC");
+  const [replayPlayback, setReplayPlayback] = useState(true);
 
   useEffect(() => {
+    let active = true;
     loadReplayData().then((data) => {
+      if (!active) return;
       if (data) {
         setReplayData(data);
-      }
+        setEvidenceState("ready");
+      } else setEvidenceState("unavailable");
     });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const [liveBackend, setLiveBackend] = useState<Workbench["liveBackend"]>({
@@ -139,6 +153,7 @@ export function useWorkbench(): Workbench {
   const play = useCallback(
     (nextRef: RunRef, nextMode: Mode) => {
       stop();
+      setReplayPlayback(false);
       setRef(nextRef);
       setModeState(nextMode);
       setElapsed(0);
@@ -184,7 +199,7 @@ export function useWorkbench(): Workbench {
     };
   }, []);
 
-  const analyzeLive = useCallback(async () => {
+  const analyzeLive = useCallback(async (transaction: Record<string, unknown>) => {
     closeEventStream.current?.();
     setLiveBackend((current) => ({
       ...current,
@@ -196,12 +211,7 @@ export function useWorkbench(): Workbench {
     }));
     try {
       const [config, context] = await Promise.all([getBackendConfig(), getChainContext()]);
-      const proposal = await createLiveProposal(
-        ref,
-        resolveRun(ref, mode).payload,
-        context,
-        config,
-      );
+      const proposal = await createLiveProposal(transaction);
       setLiveBackend((current) => ({
         ...current,
         connection: "ready",
@@ -231,32 +241,35 @@ export function useWorkbench(): Workbench {
         error: error instanceof Error ? error.message : "Live proposal request failed.",
       }));
     }
-  }, [mode, ref]);
+  }, []);
 
-  const executeLive = useCallback(async () => {
-    if (!liveBackend.proposal) return;
-    setLiveBackend((current) => ({
-      ...current,
-      executing: true,
-      error: null,
-    }));
-    try {
-      const result = await executeLiveProposal(liveBackend.proposal.proposalId);
+  const executeLive = useCallback(
+    async (safeSignatures: string) => {
+      if (!liveBackend.proposal) return;
       setLiveBackend((current) => ({
         ...current,
-        executing: false,
-        executionResult: result,
+        executing: true,
+        error: null,
       }));
-      const [config, context] = await Promise.all([getBackendConfig(), getChainContext()]);
-      setLiveBackend((current) => ({ ...current, config, context }));
-    } catch (err) {
-      setLiveBackend((current) => ({
-        ...current,
-        executing: false,
-        error: err instanceof Error ? err.message : "Execution failed.",
-      }));
-    }
-  }, [liveBackend.proposal]);
+      try {
+        const result = await executeLiveProposal(liveBackend.proposal.proposalId, safeSignatures);
+        setLiveBackend((current) => ({
+          ...current,
+          executing: false,
+          executionResult: result,
+        }));
+        const [config, context] = await Promise.all([getBackendConfig(), getChainContext()]);
+        setLiveBackend((current) => ({ ...current, config, context }));
+      } catch (err) {
+        setLiveBackend((current) => ({
+          ...current,
+          executing: false,
+          error: err instanceof Error ? err.message : "Execution failed.",
+        }));
+      }
+    },
+    [liveBackend.proposal],
+  );
 
   const setMode = useCallback(
     (m: Mode) => {
@@ -311,30 +324,61 @@ export function useWorkbench(): Workbench {
     if (tourStep !== null && tourStep > 0) applyStep(tourStep - 1);
   }, [tourStep, applyStep]);
 
-  const chooseReplayRun = useCallback((key: ReplayRunKey) => {
-    stop();
-    setActiveReplayRun(key);
-    setModeState(key === "runC" ? "guarded" : "unguarded");
-    setElapsed(0);
-    setRunStatus("idle");
-  }, [stop]);
+  const chooseReplayRun = useCallback(
+    (key: ReplayRunKey) => {
+      stop();
+      setReplayPlayback(true);
+      setActiveReplayRun(key);
+      setModeState(key === "runC" ? "guarded" : "unguarded");
+      setCrateOpen(true);
+      setElapsed(0);
+      setRunStatus("running");
+      const scene = adaptReplayToScene(replayData, key);
+      const duration = replayDurationMs(scene.events);
+      const t0 = performance.now();
+      timer.current = window.setInterval(() => {
+        const elapsed = performance.now() - t0;
+        if (elapsed >= duration) {
+          stop();
+          setElapsed(duration);
+          setRunStatus("done");
+        } else setElapsed(elapsed);
+      }, TICK_MS);
+    },
+    [stop, replayData],
+  );
 
-  const scrubElapsed = useCallback((ms: number) => {
-    stop();
-    setElapsed(ms);
-    setRunStatus("done");
-  }, [stop]);
+  useEffect(() => {
+    if (replayData && runStatus === "idle") chooseReplayRun(activeReplayRun);
+  }, [replayData, runStatus, activeReplayRun, chooseReplayRun]);
+
+  const scrubElapsed = useCallback(
+    (ms: number) => {
+      stop();
+      setElapsed(ms);
+      setRunStatus("done");
+    },
+    [stop],
+  );
+
+  const replayScene = useMemo(
+    () => adaptReplayToScene(replayData, activeReplayRun),
+    [replayData, activeReplayRun],
+  );
 
   const togglePlayPause = useCallback(() => {
     if (runStatus === "running") {
       stop();
-      setRunStatus("idle");
+      setRunStatus("paused");
     } else {
       stop();
-      setElapsed(0);
+      const duration = replayPlayback
+        ? replayDurationMs(replayScene.events)
+        : resolveRun(ref, mode).durationMs;
+      const startAt = runStatus === "paused" ? elapsedMs : 0;
+      setElapsed(startAt);
       setRunStatus("running");
-      const duration = 2400;
-      const t0 = performance.now();
+      const t0 = performance.now() - startAt;
       timer.current = window.setInterval(() => {
         const el = performance.now() - t0;
         if (el >= duration) {
@@ -344,16 +388,13 @@ export function useWorkbench(): Workbench {
         } else setElapsed(el);
       }, TICK_MS);
     }
-  }, [runStatus, stop]);
-
-  const replayScene = useMemo(
-    () => adaptReplayToScene(replayData, activeReplayRun),
-    [replayData, activeReplayRun],
-  );
+  }, [runStatus, replayPlayback, replayScene, ref, mode, elapsedMs, stop]);
 
   const resolved = useMemo(() => resolveRun(ref, mode), [ref, mode]);
+  const replayDuration = replayDurationMs(replayScene.events);
+  const durationMs = replayPlayback ? replayDuration : resolved.durationMs;
   const derived = useMemo(() => {
-    if (replayData) {
+    if (replayPlayback) {
       return deriveCustomRun(
         replayScene.events,
         activeReplayRun === "runC" ? "guarded" : "unguarded",
@@ -361,23 +402,35 @@ export function useWorkbench(): Workbench {
       );
     }
     return deriveRun(ref, mode, runStatus === "idle" ? -1 : elapsedMs);
-  }, [replayData, replayScene, activeReplayRun, runStatus, elapsedMs, ref, mode]);
+  }, [replayPlayback, replayScene, activeReplayRun, runStatus, elapsedMs, ref, mode]);
 
   return {
     reducedMotion,
+    evidenceState,
     mode,
     ref,
     runStatus,
     elapsedMs,
-    durationMs: replayData ? 2400 : resolved.durationMs,
+    durationMs,
     derived,
-    payload: replayData ? replayScene.payload : resolved.payload,
+    payload: replayPlayback ? replayScene.payload : resolved.payload,
     focus,
     focusTick,
     selected,
     crateOpen,
     tourStep,
-    badges: replayScene.badges,
+    badges: replayPlayback ? replayScene.badges : [],
+    replayEvents: replayPlayback ? replayScene.events : [],
+    reportedLabel: replayPlayback ? replayScene.reportedLabel : null,
+    reportedTag: replayPlayback ? replayScene.reportedTag : "UNTRUSTED",
+    replaySignerCount:
+      replayPlayback && activeReplayRun === "runA"
+        ? (replayData?.caseFacts?.approvingSignerCount ?? null)
+        : null,
+    replaySafeTransactionCount:
+      replayPlayback && activeReplayRun === "runA"
+        ? (replayData?.caseFacts?.safeTransactionCount ?? null)
+        : null,
     replayData,
     activeReplayRun,
     chooseReplayRun,

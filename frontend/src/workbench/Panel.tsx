@@ -58,6 +58,9 @@ export function Panel({ wb }: { wb: Workbench }) {
   const tabs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedRpcIndex, setCopiedRpcIndex] = useState<number | null>(null);
+  const [safeSignatures, setSafeSignatures] = useState("");
+  const [rawTransactionJson, setRawTransactionJson] = useState("");
+  const [liveInputError, setLiveInputError] = useState<string | null>(null);
   const guarded = wb.mode === "guarded";
   const running = wb.runStatus === "running";
   const pct = wb.runStatus === "idle" ? 0 : Math.min(100, (wb.elapsedMs / wb.durationMs) * 100);
@@ -68,8 +71,28 @@ export function Panel({ wb }: { wb: Workbench }) {
     window.open("/run.json", "_blank");
   }
 
+  function handleAnalyzeLive() {
+    try {
+      const parsed: unknown = JSON.parse(rawTransactionJson);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("Paste a JSON object containing raw Safe transaction fields.");
+      }
+      const record = parsed as Record<string, unknown>;
+      const transaction =
+        record.transaction && typeof record.transaction === "object"
+          ? (record.transaction as Record<string, unknown>)
+          : record;
+      setLiveInputError(null);
+      void wb.analyzeLive(transaction);
+    } catch (error) {
+      setLiveInputError(error instanceof Error ? error.message : "Invalid transaction JSON.");
+    }
+  }
+
   function handleCopyScript() {
-    const cmd = wb.replayData?.reproduceScript || "export $(cat .env.local | xargs) && forge test --match-contract BybitReplaySliceTest -vvv";
+    const cmd =
+      wb.replayData?.reproduceScript ||
+      "export $(cat .env.local | xargs) && forge test --match-contract BybitReplaySliceTest -vvv";
     navigator.clipboard.writeText(cmd);
     setCopiedScript(true);
     setTimeout(() => setCopiedScript(false), 2000);
@@ -121,7 +144,9 @@ export function Panel({ wb }: { wb: Workbench }) {
             Replay · Mainnet fork
           </h2>
           <span className="rounded border border-[#7ACB8A]/40 bg-[#7ACB8A]/10 px-2 py-0.5 font-mono text-[10px] font-bold text-[#7ACB8A]">
-            FORK BLOCK #21,895,237
+            {wb.replayData?.forkBlock.number
+              ? `LOCAL FORK · BLOCK #${wb.replayData.forkBlock.number.toLocaleString("en-US")}`
+              : "FORK BLOCK NOT CAPTURED"}
           </span>
         </div>
         <p className="mt-1 text-xs text-[#a89f90]">
@@ -191,7 +216,11 @@ export function Panel({ wb }: { wb: Workbench }) {
               onClick={wb.togglePlayPause}
               className="inline-flex items-center gap-1.5 rounded-full bg-[#FF5B14] px-4 py-1.5 text-xs font-bold text-[#120f0c] transition-colors hover:bg-[#ff7a3a]"
             >
-              {running ? <Pause className="size-3.5" /> : <Play className="size-3.5 fill-current" />}
+              {running ? (
+                <Pause className="size-3.5" />
+              ) : (
+                <Play className="size-3.5 fill-current" />
+              )}
               {running ? "Pause" : "Play Run"}
             </button>
             <span className="font-mono text-xs text-[#a89f90]">
@@ -211,6 +240,73 @@ export function Panel({ wb }: { wb: Workbench }) {
             />
           </div>
         </div>
+
+        {wb.replayEvents.length > 0 && (
+          <div className="mt-3 rounded-xl border border-[#2f2922] bg-[#14110e] p-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className={eyebrow}>Saved event sequence</h3>
+              <span className="font-mono text-[10px] text-[#8a8071]">
+                {wb.replayEvents.filter((event) => event.t <= wb.elapsedMs).length}/
+                {wb.replayEvents.length} reached
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#8a8071]">
+              Playback is paced for viewing. Row order and source labels come from the saved
+              artifact.
+            </p>
+            <ol className="mt-3 space-y-2">
+              {wb.replayEvents.map((event, index) => {
+                const reached = event.t <= wb.elapsedMs;
+                const current =
+                  reached &&
+                  !wb.replayEvents.slice(index + 1).some((next) => next.t <= wb.elapsedMs);
+                const tone =
+                  event.status === "bad"
+                    ? "border-[#FF3B30] bg-[#FF3B30]/10 text-[#ff6a5e]"
+                    : event.status === "ok"
+                      ? "border-[#7ACB8A] bg-[#7ACB8A]/10 text-[#7ACB8A]"
+                      : current
+                        ? "border-[#FF5B14] bg-[#FF5B14]/10 text-[#FF5B14]"
+                        : reached
+                          ? "border-[#5a4d3f] text-[#c9c0b0]"
+                          : "border-[#2f2922] text-[#8a8071]";
+                const source =
+                  event.eventSource === "recorded_chain_observation"
+                    ? "RECORDED CHAIN OBSERVATION"
+                    : event.eventSource === "foundry_fork_test"
+                      ? "FOUNDRY FORK TEST"
+                      : event.eventSource === "replay_metadata"
+                        ? "REPLAY METADATA"
+                        : (event.eventSource ?? "SOURCE NOT CAPTURED");
+                return (
+                  <li key={`${event.eventType ?? "event"}-${index}`}>
+                    <button
+                      type="button"
+                      onClick={() => wb.scrubElapsed(event.t)}
+                      aria-current={current ? "step" : undefined}
+                      className={`w-full rounded-lg border px-2.5 py-2 text-left ${tone}`}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider">
+                          {String(index + 1).padStart(2, "0")} · {event.eventType ?? "event"}
+                        </span>
+                        <span className="shrink-0 font-mono text-[9px] font-bold tracking-wide">
+                          {reached ? (event.status === "bad" ? "REVERT" : "REACHED") : "UP NEXT"}
+                        </span>
+                      </span>
+                      <span className="mt-1 block text-xs leading-snug text-[#F5EEDF]">
+                        {event.label}
+                      </span>
+                      <span className="mt-1 block font-mono text-[9px] font-bold tracking-wider text-[#a89f90]">
+                        {source}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )}
       </section>
 
       {/* 1. guard toggle */}
@@ -383,16 +479,35 @@ export function Panel({ wb }: { wb: Workbench }) {
               </dd>
             </dl>
           )}
+          <label className="mt-3 block text-[11px] font-semibold text-[#d8cfbf]">
+            Raw Safe transaction JSON
+            <textarea
+              value={rawTransactionJson}
+              onChange={(event) => setRawTransactionJson(event.target.value)}
+              spellCheck={false}
+              className="mt-1.5 block min-h-28 w-full resize-y rounded-lg border border-[#3a332b] bg-[#100e0b] p-2 font-mono text-[10px] text-[#F5EEDF] outline-none focus:border-[#FF5B14]"
+              placeholder={
+                '{\n  "chainId": 31337,\n  "safe": "0x…",\n  "safeNonce": "…",\n  "to": "0x…",\n  "value": "0",\n  "data": "0x",\n  "operation": 0,\n  "safeTxGas": "0",\n  "baseGas": "0",\n  "gasPrice": "0",\n  "gasToken": "0x…",\n  "refundReceiver": "0x…"\n}'
+              }
+            />
+          </label>
           <button
             type="button"
-            onClick={() => {
-              void wb.analyzeLive();
-            }}
-            disabled={wb.liveBackend.connection !== "ready" || wb.liveBackend.submitting}
+            onClick={handleAnalyzeLive}
+            disabled={
+              wb.liveBackend.connection !== "ready" ||
+              wb.liveBackend.submitting ||
+              !rawTransactionJson.trim()
+            }
             className="mt-3 w-full rounded-full border border-[#FF5B14] px-3 py-2 text-sm font-bold text-[#FF5B14] transition-colors hover:bg-[#FF5B14] hover:text-[#120f0c] disabled:cursor-not-allowed disabled:border-[#4a4238] disabled:text-[#8a8071]"
           >
-            {wb.liveBackend.submitting ? "Reading live Safe…" : "Analyze selected payload"}
+            {wb.liveBackend.submitting ? "Checking raw transaction…" : "Analyze raw transaction"}
           </button>
+          {liveInputError && (
+            <p role="alert" className="mt-2 text-[12px] text-[#ff6a5e]">
+              {liveInputError}
+            </p>
+          )}
           {wb.liveBackend.error && (
             <p role="status" className="mt-2 text-[12px] text-[#E3A73B]">
               {wb.liveBackend.error}
@@ -437,7 +552,9 @@ export function Panel({ wb }: { wb: Workbench }) {
               </dl>
               <div className="mt-3">
                 {wb.liveBackend.executionResult ? (
-                  <div className={`rounded-lg border p-2.5 text-[11px] leading-snug ${wb.liveBackend.executionResult.success ? "border-[#7ACB8A]/60 bg-[#7ACB8A]/10 text-[#7ACB8A]" : "border-[#ff6a5e]/60 bg-[#ff6a5e]/10 text-[#ff6a5e]"}`}>
+                  <div
+                    className={`rounded-lg border p-2.5 text-[11px] leading-snug ${wb.liveBackend.executionResult.success ? "border-[#7ACB8A]/60 bg-[#7ACB8A]/10 text-[#7ACB8A]" : "border-[#ff6a5e]/60 bg-[#ff6a5e]/10 text-[#ff6a5e]"}`}
+                  >
                     <p className="font-bold uppercase tracking-wider">
                       {wb.liveBackend.executionResult.success
                         ? "✓ Verified On-Chain Execution"
@@ -447,40 +564,70 @@ export function Panel({ wb }: { wb: Workbench }) {
                       {wb.liveBackend.executionResult.transactionHash && (
                         <>
                           <dt className="text-[#a89f90]">Safe Tx Hash</dt>
-                          <dd className="break-all font-mono text-[#F5EEDF]">{wb.liveBackend.executionResult.transactionHash}</dd>
+                          <dd className="break-all font-mono text-[#F5EEDF]">
+                            {wb.liveBackend.executionResult.transactionHash}
+                          </dd>
                         </>
                       )}
                       {wb.liveBackend.executionResult.blockNumber && (
                         <>
                           <dt className="text-[#a89f90]">Mined at block · Gas used</dt>
                           <dd className="font-mono text-[#F5EEDF]">
-                            #{wb.liveBackend.executionResult.blockNumber} · {Number(wb.liveBackend.executionResult.gasUsed).toLocaleString()} gas
+                            #{wb.liveBackend.executionResult.blockNumber} ·{" "}
+                            {Number(wb.liveBackend.executionResult.gasUsed).toLocaleString()} gas
                           </dd>
                         </>
                       )}
                       {wb.liveBackend.executionResult.registryTransactionHash && (
                         <>
                           <dt className="text-[#a89f90]">Registry Attestation Tx</dt>
-                          <dd className="break-all font-mono text-[#d8cfbf]">{wb.liveBackend.executionResult.registryTransactionHash}</dd>
+                          <dd className="break-all font-mono text-[#d8cfbf]">
+                            {wb.liveBackend.executionResult.registryTransactionHash}
+                          </dd>
                         </>
                       )}
                     </dl>
                   </div>
                 ) : (
                   <>
+                    <label className="mb-2 block text-[11px] font-semibold text-[#d8cfbf]">
+                      Safe owner signature bytes (signed offline)
+                      <textarea
+                        value={safeSignatures}
+                        onChange={(event) => setSafeSignatures(event.target.value.trim())}
+                        spellCheck={false}
+                        autoComplete="off"
+                        className="mt-1.5 block min-h-20 w-full resize-y rounded-lg border border-[#3a332b] bg-[#100e0b] p-2 font-mono text-[10px] text-[#F5EEDF] outline-none focus:border-[#FF5B14]"
+                        placeholder="0x… 65-byte Safe signature (never paste a private key)"
+                      />
+                    </label>
                     <button
                       type="button"
                       onClick={() => {
-                        void wb.executeLive();
+                        void wb.executeLive(safeSignatures);
                       }}
-                      disabled={wb.liveBackend.executing}
+                      disabled={
+                        wb.liveBackend.executing ||
+                        !wb.liveBackend.config?.safeExecutionAvailable ||
+                        wb.liveBackend.proposal.decision !== "ATTEST" ||
+                        !wb.liveBackend.proposal.verifier.thresholdMet ||
+                        !/^0x(?:[0-9a-fA-F]{2}){65,}$/.test(safeSignatures)
+                      }
                       className="w-full rounded-full bg-[#7ACB8A] px-3 py-2 text-sm font-bold text-[#120f0c] transition-colors hover:bg-[#8ade9c] disabled:cursor-not-allowed disabled:bg-[#4a4238] disabled:text-[#8a8071]"
                     >
-                      {wb.liveBackend.executing ? "Submitting on-chain…" : "Submit attestation & execute on Safe"}
+                      {wb.liveBackend.executing
+                        ? "Submitting on-chain…"
+                        : "Submit attestations & execute Safe"}
                     </button>
                     <p className="mt-1.5 text-center text-[11px] text-[#a89f90]">
-                      Submits EIP-712 verifier attestation to Registry and executes via Safe 1.4.1 guard.
+                      Requires threshold verifier signatures and a valid Safe owner signature. The
+                      backend never creates either signature.
                     </p>
+                    {!wb.liveBackend.config?.safeExecutionAvailable && (
+                      <p className="mt-1 text-center text-[11px] text-[#E3A73B]">
+                        Local relayer is not configured; execution is unavailable.
+                      </p>
+                    )}
                   </>
                 )}
               </div>
@@ -648,7 +795,7 @@ export function Panel({ wb }: { wb: Workbench }) {
       <section aria-labelledby="wb-rpc-log">
         <div className="flex items-center justify-between">
           <h2 id="wb-rpc-log" className={eyebrow}>
-            7 · RPC method log
+            7 · RPC transcript
           </h2>
           <a
             href="https://etherscan.io/tx/0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882"
@@ -656,16 +803,17 @@ export function Panel({ wb }: { wb: Workbench }) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-[#FF5B14] hover:underline"
           >
-            Etherscan
+            Historical transaction
             <ExternalLink className="size-3" />
           </a>
         </div>
         <p className="mt-1 text-xs text-[#a89f90]">
-          Real RPC requests made to mainnet archive to verify contracts and state.
+          The Bybit source transaction is recorded. Raw RPC request and response logs were not
+          saved.
         </p>
 
         <div className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-[#2f2922] bg-[#14110e] p-2.5 [scrollbar-width:thin]">
-          {wb.replayData?.rpcMethodLog ? (
+          {wb.replayData?.rpcMethodLog?.length ? (
             <ul className="grid gap-2">
               {wb.replayData.rpcMethodLog.map((log, idx) => {
                 const isCopied = copiedRpcIndex === idx;
@@ -684,7 +832,11 @@ export function Panel({ wb }: { wb: Workbench }) {
                         onClick={() => handleCopyRpc(idx, copyText)}
                         className="inline-flex items-center gap-1 font-mono text-[10px] text-[#a89f90] hover:text-[#FF5B14]"
                       >
-                        {isCopied ? <Check className="size-3 text-[#7ACB8A]" /> : <Copy className="size-3" />}
+                        {isCopied ? (
+                          <Check className="size-3 text-[#7ACB8A]" />
+                        ) : (
+                          <Copy className="size-3" />
+                        )}
                         {isCopied ? "Copied" : "Copy"}
                       </button>
                     </div>
@@ -696,7 +848,9 @@ export function Panel({ wb }: { wb: Workbench }) {
               })}
             </ul>
           ) : (
-            <p className="text-xs text-[#8a8071]">not captured</p>
+            <p className="text-xs text-[#8a8071]">
+              No raw RPC transcript was captured for this replay.
+            </p>
           )}
         </div>
       </section>
@@ -720,12 +874,19 @@ export function Panel({ wb }: { wb: Workbench }) {
             onClick={handleCopyScript}
             className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#3a332b] bg-[#14110e] px-3 py-2.5 text-xs font-bold text-[#F5EEDF] transition-colors hover:border-[#FF5B14]"
           >
-            {copiedScript ? <Check className="size-3.5 text-[#7ACB8A]" /> : <Copy className="size-3.5" />}
+            {copiedScript ? (
+              <Check className="size-3.5 text-[#7ACB8A]" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
             {copiedScript ? "Copied script" : "Reproduce script"}
           </button>
         </div>
         <p className="mt-2 text-[11px] text-[#8a8071]">
-          Run locally: <code className="rounded bg-[#1a1510] px-1 py-0.5 font-mono text-[10px] text-[#d8cfbf]">forge test --match-contract BybitReplaySliceTest</code>
+          Run locally:{" "}
+          <code className="rounded bg-[#1a1510] px-1 py-0.5 font-mono text-[10px] text-[#d8cfbf]">
+            forge test --match-contract BybitReplaySliceTest
+          </code>
         </p>
       </section>
     </div>

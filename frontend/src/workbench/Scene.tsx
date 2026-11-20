@@ -1,72 +1,91 @@
-import { Suspense, useEffect, useRef, type ComponentRef } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Grid, OrbitControls } from '@react-three/drei'
-import * as THREE from 'three'
-import { CAMERA, WORLD, type CameraKey } from './scenes'
-import { VERIFIER_IDS } from './engine'
-import type { Workbench } from './useWorkbench'
-import { Beam, COL, GuardGate, PayloadCrate, ProposalBillboard, RegistryRing, ReducedMotionProvider, VaultCube, VerifierOrb } from './objects'
-import { BlockRow, StorageGrid } from './chain'
+import { Suspense, useEffect, useRef, type ComponentRef } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Grid, OrbitControls } from "@react-three/drei";
+import * as THREE from "three";
+import { CAMERA, WORLD, type CameraKey } from "./scenes";
+import { VERIFIER_IDS } from "./engine";
+import type { Workbench } from "./useWorkbench";
+import {
+  Beam,
+  COL,
+  GuardGate,
+  PayloadCrate,
+  ProposalBillboard,
+  RegistryRing,
+  ReducedMotionProvider,
+  VaultCube,
+  VerifierOrb,
+} from "./objects";
+import { BlockRow, StorageGrid } from "./chain";
 
 /** Pull the camera back on narrow screens so the whole pipeline stays in frame. */
 function poseFor(key: CameraKey, aspect: number) {
-  const pose = CAMERA[key]
-  const target = new THREE.Vector3(...pose.target)
-  const offset = new THREE.Vector3(...pose.pos).sub(target)
-  const k = Math.min(2.7, Math.max(1, 1.85 / Math.max(aspect, 0.3)))
-  const pos = target.clone().add(offset.multiplyScalar(k))
-  return { pos, target }
+  const pose = CAMERA[key];
+  const target = new THREE.Vector3(...pose.target);
+  const offset = new THREE.Vector3(...pose.pos).sub(target);
+  const k = Math.min(2.7, Math.max(1, 1.85 / Math.max(aspect, 0.3)));
+  const pos = target.clone().add(offset.multiplyScalar(k));
+  return { pos, target };
 }
 
 function CameraRig({ focus, tick, reduced }: { focus: CameraKey; tick: number; reduced: boolean }) {
-  const camera = useThree((s) => s.camera)
-  const controls = useThree((s) => s.controls) as ComponentRef<typeof OrbitControls> | null
-  const size = useThree((s) => s.size)
-  const aspect = size.width / size.height
-  const goal = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3(), flying: false, first: true })
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as ComponentRef<typeof OrbitControls> | null;
+  const size = useThree((s) => s.size);
+  const aspect = size.width / size.height;
+  const goal = useRef({
+    pos: new THREE.Vector3(),
+    target: new THREE.Vector3(),
+    flying: false,
+    first: true,
+  });
 
   useEffect(() => {
-    if (!controls) return
-    const { pos, target } = poseFor(focus, aspect)
-    const g = goal.current
-    g.pos.copy(pos)
-    g.target.copy(target)
+    if (!controls) return;
+    const { pos, target } = poseFor(focus, aspect);
+    const g = goal.current;
+    g.pos.copy(pos);
+    g.target.copy(target);
     if (reduced || g.first) {
-      camera.position.copy(pos)
-      controls.target.copy(target)
-      controls.update()
-      g.first = false
-      g.flying = false
-      controls.enabled = true
+      camera.position.copy(pos);
+      controls.target.copy(target);
+      controls.update();
+      g.first = false;
+      g.flying = false;
+      controls.enabled = true;
     } else {
-      g.flying = true
-      controls.enabled = false
+      g.flying = true;
+      controls.enabled = false;
     }
     // aspect is intentionally excluded: resizing should not re-fly the camera
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focus, tick, controls, reduced, camera])
+  }, [focus, tick, controls, reduced, camera]);
 
   useFrame((_, dt) => {
-    const g = goal.current
-    if (!g.flying || !controls) return
-    const k = 1 - Math.exp(-dt * 3.2)
-    camera.position.lerp(g.pos, k)
-    controls.target.lerp(g.target, k)
-    controls.update()
+    const g = goal.current;
+    if (!g.flying || !controls) return;
+    const k = 1 - Math.exp(-dt * 3.2);
+    camera.position.lerp(g.pos, k);
+    controls.target.lerp(g.target, k);
+    controls.update();
     if (camera.position.distanceTo(g.pos) < 0.04 && controls.target.distanceTo(g.target) < 0.04) {
-      g.flying = false
-      controls.enabled = true
+      g.flying = false;
+      controls.enabled = true;
     }
-  })
-  return null
+  });
+  return null;
 }
 
 function World({ wb }: { wb: Workbench }) {
-  const { derived: d, mode, payload } = wb
-  const guardOn = mode === 'guarded' || wb.ref.kind === 'break'
-  const st = d.status
-  const slots = VERIFIER_IDS.map((v) => st[v]) as [typeof st.verifierA, typeof st.verifierB, typeof st.verifierC]
-  const slot0 = d.receipt.stateDiff?.find((r) => r.field.startsWith('Storage slot 0')) ?? null
+  const { derived: d, mode, payload } = wb;
+  const guardOn = mode === "guarded" || wb.ref.kind === "break";
+  const st = d.status;
+  const slots = VERIFIER_IDS.map((v) => st[v]) as [
+    typeof st.verifierA,
+    typeof st.verifierB,
+    typeof st.verifierC,
+  ];
+  const slot0 = d.receipt.stateDiff?.find((r) => r.field.startsWith("Storage slot 0")) ?? null;
 
   return (
     <>
@@ -95,28 +114,77 @@ function World({ wb }: { wb: Workbench }) {
         infiniteGrid
       />
 
-      <ProposalBillboard status={st.proposal} onSelect={wb.focusNode} />
-      <PayloadCrate stage={d.stage} status={st.payload} open={wb.crateOpen} payload={payload} onSelect={wb.focusNode} onToggle={wb.toggleCrate} />
+      <ProposalBillboard
+        status={st.proposal}
+        title={wb.reportedLabel}
+        tag={wb.reportedTag}
+        signerCount={wb.replaySignerCount}
+        safeTransactionCount={wb.replaySafeTransactionCount}
+        onSelect={wb.focusNode}
+      />
+      <PayloadCrate
+        stage={d.stage}
+        status={st.payload}
+        open={wb.crateOpen}
+        payload={payload}
+        onSelect={wb.focusNode}
+        onToggle={wb.toggleCrate}
+      />
 
-      {(['verifierA', 'verifierB', 'verifierC'] as const).map((id) => (
-        <VerifierOrb key={id} id={id} letter={id.slice(-1)} status={st[id]} onSelect={wb.focusNode} />
+      {(["verifierA", "verifierB", "verifierC"] as const).map((id) => (
+        <VerifierOrb
+          key={id}
+          id={id}
+          letter={id.slice(-1)}
+          status={st[id]}
+          onSelect={wb.focusNode}
+        />
       ))}
-      {(['verifierA', 'verifierB', 'verifierC'] as const).map((id) => (
+      {(["verifierA", "verifierB", "verifierC"] as const).map((id) => (
         <Beam key={id} from={WORLD[id]} to={WORLD.registry} status={st[id]} />
       ))}
-      <RegistryRing status={st.registry} slots={slots} attested={d.attested} onSelect={wb.focusNode} />
-      <Beam from={[0, WORLD.registry[1] - 1.35, WORLD.registry[2]]} to={[0, 3.7, WORLD.gate[2]]} status={st.registry} />
+      <RegistryRing
+        status={st.registry}
+        slots={slots}
+        attested={d.attested}
+        onSelect={wb.focusNode}
+      />
+      <Beam
+        from={[0, WORLD.registry[1] - 1.35, WORLD.registry[2]]}
+        to={[0, 3.7, WORLD.gate[2]]}
+        status={st.registry}
+      />
 
-      <GuardGate status={st.gate} guardOn={guardOn} delegate={payload.operation === 'DELEGATECALL'} onSelect={wb.focusNode} />
-      <VaultCube balance={d.vault.balance} core={d.vault.core} status={st.vault} onSelect={wb.focusNode} />
+      <GuardGate
+        status={st.gate}
+        guardOn={guardOn}
+        delegate={payload.operation === "DELEGATECALL"}
+        onSelect={wb.focusNode}
+      />
+      <VaultCube
+        balance={d.vault.balance}
+        core={d.vault.core}
+        implementation={slot0?.after}
+        status={st.vault}
+        onSelect={wb.focusNode}
+      />
 
       <BlockRow receipt={d.receipt} />
-      <StorageGrid visible={wb.selected === 'vault'} slot0={slot0} landed={d.receipt.landed} />
+      <StorageGrid visible={wb.selected === "vault"} slot0={slot0} landed={d.receipt.landed} />
 
-      <OrbitControls makeDefault enablePan={false} enableDamping dampingFactor={0.08} minDistance={3} maxDistance={36} minPolarAngle={0.2} maxPolarAngle={1.62} />
+      <OrbitControls
+        makeDefault
+        enablePan={false}
+        enableDamping
+        dampingFactor={0.08}
+        minDistance={3}
+        maxDistance={36}
+        minPolarAngle={0.2}
+        maxPolarAngle={1.62}
+      />
       <CameraRig focus={wb.focus} tick={wb.focusTick} reduced={wb.reducedMotion} />
     </>
-  )
+  );
 }
 
 export default function Scene({ wb }: { wb: Workbench }) {
@@ -124,8 +192,8 @@ export default function Scene({ wb }: { wb: Workbench }) {
     <Canvas
       dpr={[1, 1.75]}
       camera={{ position: [-1.2, 6, 15], fov: 48, near: 0.1, far: 140 }}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
-      style={{ touchAction: 'pan-y' }}
+      gl={{ antialias: true, powerPreference: "high-performance" }}
+      style={{ touchAction: "pan-y" }}
     >
       <ReducedMotionProvider value={wb.reducedMotion}>
         <Suspense fallback={null}>
@@ -133,5 +201,5 @@ export default function Scene({ wb }: { wb: Workbench }) {
         </Suspense>
       </ReducedMotionProvider>
     </Canvas>
-  )
+  );
 }

@@ -118,6 +118,21 @@ export function loadConfig(env = process.env) {
   if (safeVersion !== '1.4.1')
     throw new Error('Only Safe version 1.4.1 is supported by this backend');
 
+  const relayerPrivateKey = env.RELAYER_PRIVATE_KEY;
+  if (
+    relayerPrivateKey &&
+    (!isHex(relayerPrivateKey, { strict: true }) ||
+      relayerPrivateKey.length !== 66)
+  ) {
+    throw new Error('RELAYER_PRIVATE_KEY must be a 32-byte hex private key');
+  }
+  const executionGasLimit = readInteger(
+    'EXECUTION_GAS_LIMIT',
+    env.EXECUTION_GAS_LIMIT,
+    2_000_000,
+    { min: 21_000, max: 30_000_000 },
+  );
+
   const verifierAddresses = readAddressList(
     'VERIFIER_ADDRESSES',
     env.VERIFIER_ADDRESSES,
@@ -169,6 +184,8 @@ export function loadConfig(env = process.env) {
     port,
     chainId,
     rpcUrl: env.RPC_URL ?? DEFAULTS.rpcUrl,
+    relayerPrivateKey,
+    executionGasLimit: BigInt(executionGasLimit),
     safeVersion,
     safeAddress: readOptionalAddress('SAFE_ADDRESS', env.SAFE_ADDRESS),
     verifierSignerAddress: readOptionalAddress(

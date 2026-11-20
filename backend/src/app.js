@@ -133,8 +133,12 @@ export function buildApp(config) {
         policyConfigured: policyReady,
         registrySubmissionAvailable: Boolean(config.registryAddress),
         executionAvailable: Boolean(
-          config.safeAddress && config.chainId === 31337,
+          config.safeAddress &&
+          config.registryAddress &&
+          config.relayerPrivateKey &&
+          config.chainId === 31337,
         ),
+        relayerConfigured: Boolean(config.relayerPrivateKey),
       });
     } catch {
       return reply.code(503).send({
@@ -146,6 +150,7 @@ export function buildApp(config) {
         safeConfigured: Boolean(config.safeAddress),
         registrySubmissionAvailable: false,
         executionAvailable: false,
+        relayerConfigured: Boolean(config.relayerPrivateKey),
       });
     }
   });
@@ -172,9 +177,12 @@ export function buildApp(config) {
         chainId,
         observedAtBlock: block.number.toString(),
         blockHash: block.hash,
+        timestamp: block.timestamp.toString(),
         safeVersion: config.safeVersion,
         safeAddress: config.safeAddress ?? null,
         safeNonce: null,
+        owners: null,
+        threshold: null,
         safeBalanceWei: null,
         safeCodeHash: null,
         guardAddress: null,
@@ -190,35 +198,54 @@ export function buildApp(config) {
         });
       }
       await assertSafeReady(client, config, config.chainId, config.safeAddress);
-      const [safeNonce, safeBalance, code, modules, guardSlot] =
-        await Promise.all([
-          client.readContract({
-            address: config.safeAddress,
-            abi: SAFE_ABI,
-            functionName: 'nonce',
-            blockNumber: block.number,
-          }),
-          client.getBalance({
-            address: config.safeAddress,
-            blockNumber: block.number,
-          }),
-          client.getBytecode({
-            address: config.safeAddress,
-            blockNumber: block.number,
-          }),
-          client.readContract({
-            address: config.safeAddress,
-            abi: SAFE_ABI,
-            functionName: 'getModulesPaginated',
-            args: ['0x0000000000000000000000000000000000000001', 10n],
-            blockNumber: block.number,
-          }),
-          client.getStorageAt({
-            address: config.safeAddress,
-            slot: '0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8',
-            blockNumber: block.number,
-          }),
-        ]);
+      const [
+        safeNonce,
+        safeBalance,
+        code,
+        modules,
+        guardSlot,
+        owners,
+        threshold,
+      ] = await Promise.all([
+        client.readContract({
+          address: config.safeAddress,
+          abi: SAFE_ABI,
+          functionName: 'nonce',
+          blockNumber: block.number,
+        }),
+        client.getBalance({
+          address: config.safeAddress,
+          blockNumber: block.number,
+        }),
+        client.getBytecode({
+          address: config.safeAddress,
+          blockNumber: block.number,
+        }),
+        client.readContract({
+          address: config.safeAddress,
+          abi: SAFE_ABI,
+          functionName: 'getModulesPaginated',
+          args: ['0x0000000000000000000000000000000000000001', 10n],
+          blockNumber: block.number,
+        }),
+        client.getStorageAt({
+          address: config.safeAddress,
+          slot: '0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8',
+          blockNumber: block.number,
+        }),
+        client.readContract({
+          address: config.safeAddress,
+          abi: SAFE_ABI,
+          functionName: 'getOwners',
+          blockNumber: block.number,
+        }),
+        client.readContract({
+          address: config.safeAddress,
+          abi: SAFE_ABI,
+          functionName: 'getThreshold',
+          blockNumber: block.number,
+        }),
+      ]);
       context.safeNonce = safeNonce.toString();
       context.safeBalanceWei = safeBalance.toString();
       context.safeCodeHash = code && code !== '0x' ? keccak256(code) : null;
@@ -226,6 +253,8 @@ export function buildApp(config) {
         ? `0x${BigInt(guardSlot).toString(16).slice(-40).padStart(40, '0')}`
         : null;
       context.enabledModules = modules[0].length;
+      context.owners = owners;
+      context.threshold = threshold.toString();
       return { ...context, ready: true };
     } catch (error) {
       request.log.warn({ err: error }, 'Unable to read live Safe context');
@@ -284,7 +313,10 @@ export function buildApp(config) {
       thresholdMet: result.validSignerCount >= result.threshold,
       registrySubmission: 'NOT_SUBMITTED',
       executionAvailable: Boolean(
-        config.safeAddress && config.chainId === 31337,
+        config.safeAddress &&
+        config.registryAddress &&
+        config.relayerPrivateKey &&
+        config.chainId === 31337,
       ),
     });
   });
@@ -299,7 +331,24 @@ export function buildApp(config) {
         'PROPOSAL_NOT_FOUND',
         'Proposal was not found in this backend process',
       );
-    const result = await executeProposalOnchain({ client, config, proposal });
+    const body = request.body ?? {};
+    if (
+      typeof body !== 'object' ||
+      Array.isArray(body) ||
+      Object.keys(body).some((key) => key !== 'safeSignatures')
+    ) {
+      throw apiError(
+        400,
+        'INVALID_EXECUTION_REQUEST',
+        'Only the Safe signature bytes may be submitted to this endpoint',
+      );
+    }
+    const result = await executeProposalOnchain({
+      client,
+      config,
+      proposal,
+      safeSignatures: body.safeSignatures,
+    });
     return reply.code(result.success ? 200 : 409).send(result);
   });
 

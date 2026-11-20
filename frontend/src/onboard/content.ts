@@ -34,6 +34,11 @@ export const ONBOARD_COPY = {
   pasteTitle: "Paste policy JSON",
   pastePlaceholder: '{\n  "schema": "intentlock.policy.v1"\n}',
   parseButton: "Use pasted policy",
+  jsonEditorTitle: "Edit the complete policy JSON",
+  jsonEditorDescription:
+    "Edit every schema field, including ERC-20 token addresses and runtime code hashes. Applying validates the complete policy before changing the form.",
+  jsonEditorSource: "Policy JSON editor",
+  applyJson: "Validate and apply JSON",
   templateTitle: "Start from a template",
   templateDescriptions: {
     sample:

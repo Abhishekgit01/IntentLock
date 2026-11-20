@@ -59,11 +59,11 @@ anvil --version
 cast --version
 ```
 
-The Solidity slice and `foundry.toml` are present. The `quai/` package builds a separate Orchard artifact set and provides a read-only chain preflight plus a guarded deploy script. This is deployment tooling, not proof of a Quai deployment. Resolve clean-checkout toolchain pins and complete the human contract reviews before using the broadcast path.
+The `quai/` package builds a separate Orchard artifact set and provides a read-only chain preflight plus a guarded deploy script. Orchard contracts have been deployed; see [the deployment manifest](../deployments/quai-orchard-cyprus1.json). Source verification and the backend's Quai execution adapter remain pending. Review the current deployment guide before any further broadcast.
 
 ## 7. Quai Orchard sponsor target
 
-Use the project-specific steps in [Quai Orchard integration](QUAI_ORCHARD.md). They compile with Solidity 0.8.19 and London EVM into `out-quai/`, run a read-only RPC check, and require a dedicated testnet wallet plus a deliberate broadcast gate. The official endpoint and chain ID were checked against Quai documentation on 2026-11-20. Do not copy any upstream `.env` or Anvil private key.
+Use the project-specific steps in [Quai Orchard integration](QUAI_ORCHARD.md). They compile with Solidity 0.8.19 and London EVM into `out-quai/` and run a read-only RPC check. The deployed contracts and their receipts are recorded in the Orchard manifest. The backend still targets Anvil, so these deployment steps do not start a live Orchard application. Never copy an upstream `.env` or Anvil private key into the Quai deployment environment.
 
 ## 4. Local runtime configuration
 

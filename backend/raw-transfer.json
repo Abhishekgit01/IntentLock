@@ -1,0 +1,19 @@
+{
+  "transaction": {
+    "chainId": 31337,
+    "safe": "0x67f2Cd72901b066233E8aEc8e832B9eC8f5DD56B",
+    "safeNonce": "2",
+    "to": "0x71c7656eC7ab88b098DeFB751b7401b5f6d8E4a1",
+    "value": "1",
+    "data": "0x",
+    "operation": 0,
+    "safeTxGas": "0",
+    "baseGas": "0",
+    "gasPrice": "0",
+    "gasToken": "0x0000000000000000000000000000000000000000",
+    "refundReceiver": "0x0000000000000000000000000000000000000000"
+  },
+  "declaredMetadata": {
+    "label": "CLI generated native transfer example"
+  }
+}

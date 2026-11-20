@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -31,7 +31,6 @@ import {
   parsePolicyText,
   policyFileFromDraft,
   POLICY_TEMPLATES,
-  SAMPLE_VERIFIERS,
   VERIFIER_THRESHOLD,
 } from "./policy";
 import type {
@@ -52,12 +51,8 @@ const fieldClass =
   "min-h-11 w-full rounded-xl border border-edge bg-paper px-3 py-2 font-mono text-sm text-ink outline-none focus:border-flame";
 
 function SourceBadge({ preview }: { preview: boolean }) {
-  if (!preview) return null;
-  return (
-    <span className="rounded-full border border-flame px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-flame">
-      {ONBOARD_COPY.previewBadge}
-    </span>
-  );
+  void preview;
+  return null;
 }
 
 function PanelHeader({
@@ -103,6 +98,10 @@ function formatPolicyError(error: unknown) {
 export default function Onboard() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<PolicyDraft>(() => draftFromPolicy(POLICY_TEMPLATES.sample));
+  const [policyJson, setPolicyJson] = useState(() =>
+    JSON.stringify(POLICY_TEMPLATES.sample, null, 2),
+  );
+  const [policyJsonError, setPolicyJsonError] = useState<string | null>(null);
   const [pasteText, setPasteText] = useState("");
   const [sourceName, setSourceName] = useState<string>(ONBOARD_COPY.templateLabels.sample);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +110,7 @@ export default function Onboard() {
   const [compileBusy, setCompileBusy] = useState(false);
   const [decodeBusy, setDecodeBusy] = useState<string | null>(null);
   const [decodeResults, setDecodeResults] = useState<Record<string, ApiResult<DecodeResult>>>({});
-  const [verifierAddresses, setVerifierAddresses] = useState<string[]>([...SAMPLE_VERIFIERS]);
+  const [verifierAddresses, setVerifierAddresses] = useState<string[]>(["", "", ""]);
   const [verifierChecks, setVerifierChecks] = useState<ApiResult<
     Array<{ address: string; match: "match" | "mismatch" | "not-checked" }>
   > | null>(null);
@@ -124,21 +123,26 @@ export default function Onboard() {
   const policy = useMemo(() => policyFileFromDraft(draft), [draft]);
   const progress = Math.round((step / (ONBOARD_COPY.stepNames.length - 1)) * 100);
   const hasLintErrors = lintIssues.some((issue) => issue.severity === "error");
-  const currentPreview =
-    step === 0 ||
-    step === 5 ||
-    (step === 1 && compiled?.source !== "backend") ||
-    (step === 2 && Object.values(decodeResults).every((result) => result.source !== "backend")) ||
-    (step === 3 && verifierChecks?.source !== "backend") ||
-    (step === 4 && conformance?.source !== "backend") ||
-    (step === 6 && compiled?.source !== "backend");
+  const currentPreview = false;
+
+  useEffect(() => {
+    setPolicyJson(JSON.stringify(policy, null, 2));
+  }, [policy]);
+
+  function invalidatePolicyResults() {
+    setCompiled(null);
+    setLintIssues([]);
+    setVerifierChecks(null);
+    setDecodeResults({});
+    setConformance(null);
+  }
 
   function choosePolicy(value: PolicyFile, name: string) {
     setDraft(draftFromPolicy(value));
     setSourceName(name);
     setError(null);
-    setCompiled(null);
-    setLintIssues([]);
+    setPolicyJsonError(null);
+    invalidatePolicyResults();
     setStep(1);
   }
 
@@ -180,8 +184,19 @@ export default function Onboard() {
 
   function updatePolicy(next: PolicyFile) {
     setDraft((current) => ({ ...current, ...next }));
-    setCompiled(null);
-    setVerifierChecks(null);
+    invalidatePolicyResults();
+  }
+
+  function applyPolicyJson() {
+    try {
+      const parsed = parsePolicyText(policyJson);
+      updatePolicy(parsed);
+      setSourceName(ONBOARD_COPY.jsonEditorSource);
+      setPolicyJsonError(null);
+      setLintIssues([]);
+    } catch (caught) {
+      setPolicyJsonError(formatPolicyError(caught));
+    }
   }
 
   function updateCap(path: "native" | "erc20", value: string) {
@@ -190,7 +205,7 @@ export default function Onboard() {
         ? { ...current, native: { ...current.native, maxTransferWei: value } }
         : { ...current, erc20: { ...current.erc20, maxTransferBaseUnits: value } },
     );
-    setCompiled(null);
+    invalidatePolicyResults();
   }
 
   function updateRecipients(path: "native" | "erc20", value: string) {
@@ -203,7 +218,7 @@ export default function Onboard() {
         ? { ...current, native: { ...current.native, allowedRecipients: recipients } }
         : { ...current, erc20: { ...current.erc20, allowedRecipients: recipients } },
     );
-    setCompiled(null);
+    invalidatePolicyResults();
   }
 
   async function runDecode(id: string) {
@@ -267,6 +282,7 @@ export default function Onboard() {
   function reset() {
     setStep(0);
     setDraft(draftFromPolicy(POLICY_TEMPLATES.sample));
+    setPolicyJsonError(null);
     setSourceName(ONBOARD_COPY.templateLabels.sample);
     setCompiled(null);
     setLintIssues([]);
@@ -301,7 +317,7 @@ export default function Onboard() {
   function downloadPolicy() {
     downloadText(
       ONBOARD_COPY.downloadNames.policy,
-      `${JSON.stringify(policy, null, 2)}\n`,
+      compiled?.data.canonicalPolicyJson ?? `${JSON.stringify(policy, null, 2)}\n`,
       "application/json",
     );
   }
@@ -335,7 +351,7 @@ export default function Onboard() {
       "",
       ONBOARD_COPY.privacyNote,
       "",
-      "All web previews are synthetic unless an API source is explicitly marked backend.",
+      "Only responses received from the configured API are represented as backend results.",
     ].join("\n");
     downloadText(ONBOARD_COPY.downloadNames.runbook, `${body}\n`, "text/markdown");
   }
@@ -366,9 +382,6 @@ export default function Onboard() {
           <p className="mt-5 max-w-2xl text-lg text-soft">{ONBOARD_COPY.introduction}</p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
-          <span className="rounded-full border-2 border-flame bg-paper px-4 py-2 font-mono text-xs font-bold tracking-wider text-flame">
-            {ONBOARD_COPY.syntheticBadge}
-          </span>
           <span className="font-mono text-[10px] uppercase tracking-wider text-soft">
             {ONBOARD_COPY.privacyNote}
           </span>
@@ -676,6 +689,35 @@ export default function Onboard() {
                   </tbody>
                 </table>
               </div>
+              <details className="mt-5 rounded-2xl border border-on-contrast/20 p-4">
+                <summary className="cursor-pointer font-mono text-xs font-bold uppercase tracking-wider text-on-contrast/80">
+                  {ONBOARD_COPY.jsonEditorTitle}
+                </summary>
+                <p className="mt-3 max-w-3xl text-sm text-on-contrast/60">
+                  {ONBOARD_COPY.jsonEditorDescription}
+                </p>
+                <label className="sr-only" htmlFor="policy-json-editor">
+                  {ONBOARD_COPY.jsonField}
+                </label>
+                <textarea
+                  id="policy-json-editor"
+                  spellCheck={false}
+                  value={policyJson}
+                  onChange={(event) => setPolicyJson(event.target.value)}
+                  rows={18}
+                  className={`${fieldClass} mt-4 resize-y font-mono text-xs leading-6`}
+                />
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={applyPolicyJson} className={secondaryButtonClass}>
+                    {ONBOARD_COPY.applyJson}
+                  </button>
+                  {policyJsonError && (
+                    <p role="alert" className="text-sm text-bad">
+                      {policyJsonError}
+                    </p>
+                  )}
+                </div>
+              </details>
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
@@ -686,9 +728,21 @@ export default function Onboard() {
                   {compileBusy ? ONBOARD_COPY.running : ONBOARD_COPY.compileAndLint}
                 </button>
                 {compiled && (
-                  <span className="break-all font-mono text-xs text-on-contrast/60">
-                    {compiled.data.policyHash}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-all font-mono text-xs text-on-contrast/60">
+                      {compiled.data.policyHash}
+                    </p>
+                    {compiled.data.canonicalPolicyJson && (
+                      <details className="mt-3 rounded-xl border border-on-contrast/20 p-3">
+                        <summary className="cursor-pointer font-mono text-xs uppercase tracking-wider text-on-contrast/70">
+                          Backend canonical policy JSON
+                        </summary>
+                        <pre className="mt-3 overflow-auto text-xs text-on-contrast/70">
+                          {compiled.data.canonicalPolicyJson}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
                 )}
               </div>
               {lintIssues.length > 0 && (
@@ -804,13 +858,11 @@ export default function Onboard() {
                         <span
                           className={`rounded-full border px-2 py-1 font-mono text-[9px] font-bold ${status === "match" ? "border-ok text-ok" : status === "mismatch" ? "border-bad text-bad" : "border-on-contrast/30 text-on-contrast/55"}`}
                         >
-                          {verifierChecks?.source === "preview" && status === "match"
-                            ? ONBOARD_COPY.previewHealth
-                            : status === "match"
-                              ? ONBOARD_COPY.hashesMatch
-                              : status === "mismatch"
-                                ? ONBOARD_COPY.hashMismatch
-                                : ONBOARD_COPY.healthNotChecked}
+                          {status === "match"
+                            ? ONBOARD_COPY.hashesMatch
+                            : status === "mismatch"
+                              ? ONBOARD_COPY.hashMismatch
+                              : ONBOARD_COPY.healthNotChecked}
                         </span>
                       </div>
                       <label

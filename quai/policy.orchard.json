@@ -3,7 +3,9 @@
   "schemaVersion": 1,
   "native": {
     "maxTransferWei": "100000000000000000000",
-    "allowedRecipients": ["0x71c7656ec7ab88b098defb751b7401b5f6d8e4a1"]
+    "allowedRecipients": [
+      "0x00357c4b4f456f7015a73770e5587263f72b49fc"
+    ]
   },
   "erc20": {
     "maxTransferBaseUnits": "0",

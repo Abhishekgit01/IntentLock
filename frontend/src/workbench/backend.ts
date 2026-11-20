@@ -1,5 +1,3 @@
-import type { PayloadFields, RunRef } from "./scenes";
-
 const API_ROOT = (import.meta.env.VITE_INTENTLOCK_API_URL || "/api").replace(/\/$/, "");
 
 export interface BackendHealth {
@@ -12,6 +10,7 @@ export interface BackendHealth {
   policyConfigured?: boolean;
   registrySubmissionAvailable: boolean;
   executionAvailable: boolean;
+  relayerConfigured: boolean;
 }
 
 export interface BackendConfig {
@@ -27,6 +26,10 @@ export interface BackendConfig {
   supportedActions: string[];
   registryConfigured: boolean;
   registrySubmissionAvailable: boolean;
+  registryAddress: string | null;
+  verifierSetId: string | null;
+  maxAttestationSeconds: number;
+  relayerConfigured: boolean;
   safeExecutionAvailable: boolean;
 }
 
@@ -34,6 +37,7 @@ export interface ChainContext {
   ready: boolean;
   chainId: number;
   observedAtBlock?: string;
+  timestamp?: string;
   blockHash?: string;
   safeVersion: string;
   safeAddress: string | null;
@@ -42,6 +46,8 @@ export interface ChainContext {
   safeCodeHash: string | null;
   guardAddress: string | null;
   enabledModules: number | null;
+  owners?: string[] | null;
+  threshold?: string | null;
   source: "rpc_read";
   error?: string;
 }
@@ -115,48 +121,11 @@ export const getBackendConfig = () => api<BackendConfig>("/v1/config");
 export const getChainContext = () => api<ChainContext>("/v1/context");
 
 export async function createLiveProposal(
-  ref: RunRef,
-  payload: PayloadFields,
-  context: ChainContext,
-  config: BackendConfig,
+  transaction: Record<string, unknown>,
 ) {
-  if (!context.ready || !context.safeAddress || context.safeNonce === null) {
-    throw new Error(context.error ?? "A live Safe context is not available");
-  }
-
-  const isLegitimate = ref.kind === "scenario" && ref.id === "legit";
-  const recipient = isLegitimate ? config.nativeRecipients[0] : undefined;
-  const to = (recipient ?? payload.raw.toFull).toLowerCase();
-  const operation = payload.operation === "DELEGATECALL" ? 1 : 0;
-  const rawData = payload.raw.dataHex.replace(/^0x/i, "");
-  const data =
-    /^[\da-f]*$/i.test(rawData) && rawData.length % 2 === 0
-      ? `0x${rawData}`
-      : `0x3659cfe6${to.slice(2).toLowerCase().padStart(64, "0")}`;
-  const value = payload.raw.valueWeiHex
-    ? BigInt(`0x${payload.raw.valueWeiHex.replace(/^0x/i, "")}`).toString()
-    : "0";
-
   return api<LiveProposal>("/v1/proposals", {
     method: "POST",
-    body: JSON.stringify({
-      scenarioId: `workbench-${ref.kind}-${ref.id}`,
-      declaredMetadata: { label: payload.decodedIntent },
-      transaction: {
-        chainId: context.chainId,
-        safe: context.safeAddress,
-        safeNonce: context.safeNonce,
-        to,
-        value,
-        data,
-        operation,
-        safeTxGas: "0",
-        baseGas: "0",
-        gasPrice: "0",
-        gasToken: "0x0000000000000000000000000000000000000000",
-        refundReceiver: "0x0000000000000000000000000000000000000000",
-      },
-    }),
+    body: JSON.stringify({ transaction }),
   });
 }
 
@@ -201,8 +170,12 @@ export interface LiveExecutionResult {
   registryTransactionHash?: string;
 }
 
-export async function executeLiveProposal(proposalId: string): Promise<LiveExecutionResult> {
+export async function executeLiveProposal(
+  proposalId: string,
+  safeSignatures: string,
+): Promise<LiveExecutionResult> {
   return api<LiveExecutionResult>(`/v1/proposals/${proposalId}/execute`, {
     method: "POST",
+    body: JSON.stringify({ safeSignatures }),
   });
 }

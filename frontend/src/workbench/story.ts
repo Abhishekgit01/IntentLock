@@ -11,15 +11,15 @@ export type ActId = "attack" | "defense" | "proof" | "future";
 export const SHELL = {
   tablistLabel: "Workbench acts",
   backLabel: "Back to console",
-  badges: [],
+  badges: ["SYNTHETIC ILLUSTRATION · NO TRANSACTION SENT"],
   acts: [
     { id: "attack", label: "1 Attack" },
     { id: "defense", label: "2 Defense" },
     { id: "proof", label: "3 Proof" },
     { id: "future", label: "4 Future" },
   ] as { id: ActId; label: string }[],
-  /** acts that show the persistent data-notice strip (Act 2 carries its own badges) */
-  noticeActs: ["attack", "proof"] as ActId[],
+  /** Story scenes are illustrative; the defense act labels its saved evidence separately. */
+  noticeActs: ["attack", "proof", "future"] as ActId[],
   loading: "Loading…",
 };
 

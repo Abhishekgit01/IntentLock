@@ -1,3 +1,4 @@
 .env.quai
+.local/
 node_modules/
 *.tmp

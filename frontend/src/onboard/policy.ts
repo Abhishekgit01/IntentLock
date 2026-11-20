@@ -1,27 +1,70 @@
 import type { PolicyDraft, PolicyFile, PolicyTemplateId } from "./types";
 
-export const SAMPLE_RECIPIENT = "0x71c7656ec7ab88b098defb751b7401b5f6d8e4a1";
-export const SAMPLE_VERIFIERS = [
-  "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
-  "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
-  "0x15d34aaaf54267db7d7c367839aaf71a00a2c6a65",
-] as const;
 export const VERIFIER_THRESHOLD = 2;
 
 export function parsePolicyText(text: string): PolicyFile {
   const value: unknown = JSON.parse(text);
-  if (
-    !value ||
-    typeof value !== "object" ||
-    !("schema" in value) ||
-    value.schema !== "intentlock.policy.v1" ||
-    !("schemaVersion" in value) ||
-    value.schemaVersion !== 1 ||
-    !("native" in value) ||
-    !("erc20" in value)
-  ) {
-    throw new Error("Invalid policy");
-  }
+  const fail = (path: string): never => {
+    throw new Error(`Invalid policy field: ${path}`);
+  };
+  const object = (input: unknown, path: string): Record<string, unknown> => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) fail(path);
+    return input as Record<string, unknown>;
+  };
+  const array = (input: unknown, path: string): unknown[] => {
+    if (!Array.isArray(input)) fail(path);
+    return input as unknown[];
+  };
+  const exactKeys = (input: Record<string, unknown>, keys: string[], path: string) => {
+    if (Object.keys(input).some((key) => !keys.includes(key)))
+      fail(`${path} has an unexpected field`);
+    if (keys.some((key) => !(key in input))) fail(`${path} is missing a required field`);
+  };
+  const uint = (input: unknown, path: string) => {
+    if (
+      typeof input !== "string" ||
+      !/^(0|[1-9][0-9]*)$/.test(input) ||
+      BigInt(input) >= 2n ** 256n
+    )
+      fail(path);
+  };
+  const address = (input: unknown, path: string) => {
+    if (typeof input !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(input)) fail(path);
+  };
+  const addresses = (input: unknown, path: string) => {
+    const entries = array(input, path);
+    entries.forEach((item: unknown, index: number) => address(item, `${path}[${index}]`));
+    const normalized = entries.map((item: unknown) => String(item).toLowerCase());
+    if (new Set(normalized).size !== normalized.length) fail(`${path} contains duplicates`);
+  };
+  const root = object(value, "policy");
+  exactKeys(root, ["schema", "schemaVersion", "native", "erc20"], "policy");
+  if (root.schema !== "intentlock.policy.v1" || root.schemaVersion !== 1)
+    fail("schema/schemaVersion");
+  const native = object(root.native, "native");
+  exactKeys(native, ["maxTransferWei", "allowedRecipients"], "native");
+  uint(native.maxTransferWei, "native.maxTransferWei");
+  addresses(native.allowedRecipients, "native.allowedRecipients");
+  const erc20 = object(root.erc20, "erc20");
+  exactKeys(erc20, ["maxTransferBaseUnits", "allowedRecipients", "tokens"], "erc20");
+  uint(erc20.maxTransferBaseUnits, "erc20.maxTransferBaseUnits");
+  addresses(erc20.allowedRecipients, "erc20.allowedRecipients");
+  const tokens = array(erc20.tokens, "erc20.tokens");
+  const tokenAddresses: string[] = [];
+  tokens.forEach((entry: unknown, index: number) => {
+    const token = object(entry, `erc20.tokens[${index}]`);
+    exactKeys(token, ["address", "runtimeCodeHash"], `erc20.tokens[${index}]`);
+    address(token.address, `erc20.tokens[${index}].address`);
+    if (
+      typeof token.runtimeCodeHash !== "string" ||
+      !/^0x[0-9a-fA-F]{64}$/.test(token.runtimeCodeHash)
+    ) {
+      fail(`erc20.tokens[${index}].runtimeCodeHash`);
+    }
+    tokenAddresses.push(String(token.address).toLowerCase());
+  });
+  if (new Set(tokenAddresses).size !== tokenAddresses.length)
+    fail("erc20.tokens contains duplicate addresses");
   return value as PolicyFile;
 }
 
@@ -35,31 +78,13 @@ export function policyFileFromDraft(draft: PolicyDraft): PolicyFile {
 }
 
 export const POLICY_TEMPLATES: Record<PolicyTemplateId, PolicyFile> = {
+  // This is a schema-valid deny-all starting point. It contains no asserted on-chain facts.
   sample: {
     schema: "intentlock.policy.v1",
     schemaVersion: 1,
     native: {
-      maxTransferWei: "1000000000000000000",
-      allowedRecipients: [SAMPLE_RECIPIENT],
-    },
-    erc20: {
-      maxTransferBaseUnits: "0",
+      maxTransferWei: "0",
       allowedRecipients: [],
-      tokens: [],
-    },
-  },
-  "deny-all": {
-    schema: "intentlock.policy.v1",
-    schemaVersion: 1,
-    native: { maxTransferWei: "0", allowedRecipients: [] },
-    erc20: { maxTransferBaseUnits: "0", allowedRecipients: [], tokens: [] },
-  },
-  "native-only": {
-    schema: "intentlock.policy.v1",
-    schemaVersion: 1,
-    native: {
-      maxTransferWei: "500000000000000000",
-      allowedRecipients: [SAMPLE_RECIPIENT],
     },
     erc20: {
       maxTransferBaseUnits: "0",

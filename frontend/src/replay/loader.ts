@@ -1,44 +1,39 @@
-import type { ReplayData } from './types'
+import type { ReplayData } from "./types";
 
-let cachedReplay: ReplayData | null = null
-let fetchPromise: Promise<ReplayData | null> | null = null
+let cachedReplay: ReplayData | null = null;
+let fetchPromise: Promise<ReplayData | null> | null = null;
 
 export async function loadReplayData(): Promise<ReplayData | null> {
-  if (cachedReplay) return cachedReplay
-  if (fetchPromise) return fetchPromise
+  if (cachedReplay) return cachedReplay;
+  if (fetchPromise) return fetchPromise;
 
   fetchPromise = (async () => {
     try {
-      // Try root /run.json first, then fallback to /evidence/run.json
-      let res = await fetch('/run.json')
+      const res = await fetch("/evidence/run.json", { cache: "no-store" });
       if (!res.ok) {
-        res = await fetch('/evidence/run.json')
+        console.warn("Could not load run.json for replay");
+        return null;
       }
-      if (!res.ok) {
-        console.warn('Could not load run.json for replay')
-        return null
+      const data: unknown = await res.json();
+      if (!data || typeof data !== "object" || !("replay" in data)) return null;
+      if (data.replay && typeof data.replay === "object") {
+        cachedReplay = data.replay as ReplayData;
+        return cachedReplay;
       }
-      const data = await res.json()
-      if (data && data.replay) {
-        cachedReplay = data.replay as ReplayData
-        return cachedReplay
-      }
-      console.warn('run.json loaded but replay section is missing')
-      return null
-    } catch (err) {
-      console.warn('Failed to load replay data:', err)
-      return null
+      return null;
+    } catch {
+      return null;
     }
-  })()
+  })();
 
-  return fetchPromise
+  return fetchPromise;
 }
 
 export function getCachedReplay(): ReplayData | null {
-  return cachedReplay
+  return cachedReplay;
 }
 
 export function formatOrNotCaptured(val: string | number | null | undefined): string {
-  if (val === null || val === undefined || val === '') return 'not captured'
-  return String(val)
+  if (val === null || val === undefined || val === "") return "not captured";
+  return String(val);
 }

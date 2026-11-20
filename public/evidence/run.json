@@ -41,27 +41,6 @@
       "gas": 119392,
       "status": "PASS",
       "suite": "R (mainnet fork)"
-    },
-    "R02_OurSafeUnguardedReplay": {
-      "fixtureId": "R02",
-      "test": "test_R02_OurSafeUnguardedReplay",
-      "gas": 135035,
-      "status": "PASS",
-      "suite": "R (mainnet fork)"
-    },
-    "R03_OurSafeWithGuardBlocks": {
-      "fixtureId": "R03",
-      "test": "test_R03_OurSafeWithGuardBlocks",
-      "gas": 177034,
-      "status": "PASS",
-      "suite": "R (mainnet fork)"
-    },
-    "R04_NoAttestationOnFork": {
-      "fixtureId": "R04",
-      "test": "test_R04_NoAttestationOnFork",
-      "gas": 200117,
-      "status": "PASS",
-      "suite": "R (mainnet fork)"
     }
   },
   "notes": {
@@ -104,78 +83,18 @@
       "reportedSignerTag": "UNTRUSTED",
       "rawInput": "0x6a76120200000000000000000000000096221423681a6d52e184d440a8efcebb105c7242000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000b2b2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000bdd077f651ebe7f7b3ce16fe5f2b025be296951600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c3d0afef78a52fd504479dc2af3dc401334762cbd05609c7ac18db9ec5abf4a07a5cc09fc86efd3489707b89b0c729faed616459189cb50084f208d03b201b001f1f0f62ad358d6b319d3c1221d44456080068fe02ae5b1a39b4afb1e6721ca7f9903ac523a801533f265231cd35fc2dfddc3bd9a9563b51315cf9d5ff23dc6d2c221fdf9e4b878877a8dbeee951a4a31ddbf1d3b71e127d5eda44b4730030114baba52e06dd23da37cd2a07a6e84f9950db867374a0f77558f42adf4409bfd569673c1f0000000000000000000000000000000000000000000000000000000000"
     },
-    "deterministicDecoder": {
-      "decision": "REFUSE_POLICY",
-      "reason": "DELEGATECALL prohibited by policy D-009"
+    "caseFacts": {
+      "safeTransactionCount": 1,
+      "approvingSignerCount": 3,
+      "signerCountSource": {
+        "name": "Verichains, Bybit Incident Investigation Preliminary Report v1.0",
+        "url": "https://lazarus.day/media/post/files/2025/02/27/Bybit_Incident_Investigation_-_Preliminary_Report.pdf",
+        "page": 2
+      },
+      "scopeNote": "This replay covers the Safe transaction that changed the wallet implementation. Later asset-sweep transactions are outside this replay."
     },
     "reproduceScript": "export $(cat .env.local | xargs) && forge test --match-contract BybitReplaySliceTest -vvv",
-    "rpcMethodLog": [
-      {
-        "method": "eth_getTransactionByHash",
-        "params": [
-          "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882"
-        ],
-        "responseHash": "0x87b31af85cf2cdf6080cfb211f31326f556cdbb739a84901bba0702b7e5bd9a1",
-        "status": "200 OK"
-      },
-      {
-        "method": "eth_getTransactionReceipt",
-        "params": [
-          "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882"
-        ],
-        "responseHash": "0x619c1858aa617ee9acb25bb096e3e13f6ed9209f3d56e9803950481c7374618a",
-        "status": "200 OK"
-      },
-      {
-        "method": "eth_getBlockByNumber",
-        "params": [
-          "0x14e1845",
-          false
-        ],
-        "responseHash": "0x1a0e452edc12666064cdbbdef97de85edf5741125b4bb0eb5fd02af50cf1ebc1",
-        "status": "200 OK"
-      },
-      {
-        "method": "eth_getCode",
-        "params": [
-          "0x96221423681A6d52E184D440a8eFCEbB105C7242",
-          "0x14e1845"
-        ],
-        "responseHash": "0x45d9a8c68dabd5d52d651632cd9e06e947eb1ecd4d799f19a5bc78f3045ca23f",
-        "status": "200 OK"
-      },
-      {
-        "method": "eth_getCode",
-        "params": [
-          "0xbDd077f651EBe7f7b3cE16fe5F2b025BE2969516",
-          "0x14e1845"
-        ],
-        "responseHash": "0x87255c5f48c5bcd69857a3ee329b7eaa91e3a5ae6400ff06154ef6594231bb73",
-        "status": "200 OK"
-      },
-      {
-        "method": "eth_getStorageAt",
-        "params": [
-          "0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4",
-          "0x0",
-          "0x14e1845"
-        ],
-        "responseHash": "0xd0b848acbbd7e972a21a36d27900b03ec43e8c9e8aee6f5023118d5e5cf307c8",
-        "status": "200 OK"
-      },
-      {
-        "method": "eth_call (VERSION)",
-        "params": [
-          {
-            "to": "0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4",
-            "data": "0xffa10735"
-          },
-          "0x14e1845"
-        ],
-        "responseHash": "0x9dd6d964e72a376a8989d1d2720ab48ff4f2ad77466fb517dabc84f4a79478d4",
-        "status": "200 OK"
-      }
-    ],
+    "rpcMethodLog": [],
     "operation1Sampling": {
       "totalSampled": 8,
       "operation0Calls": 6,
@@ -187,7 +106,7 @@
       "runA": {
         "fixtureId": "R01",
         "scenarioId": "replay-R01-bybit-real-safe-unguarded",
-        "name": "Run A \u00b7 Real Bybit Safe (unguarded)",
+        "name": "Run A · Real Bybit Safe (unguarded)",
         "targetSafe": "0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4",
         "safeVersion": "1.1.1",
         "guardInstalled": false,
@@ -205,11 +124,11 @@
             "sequence": 1,
             "type": "proposal.created",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "rpc_observation",
+            "source": "replay_metadata",
             "safe": "0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4",
             "proposalId": "bybit-exploit-tx",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": null,
             "payload": {
               "rawTransaction": {
@@ -234,11 +153,11 @@
             "sequence": 2,
             "type": "decode.started",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "rpc_observation",
+            "source": "replay_metadata",
             "safe": "0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4",
             "proposalId": "bybit-exploit-tx",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": "replay-R01-bybit-real-safe-unguarded-e1",
             "payload": {
               "decoderVersion": "bybit-replay-v1"
@@ -253,20 +172,15 @@
             "sequence": 3,
             "type": "decode.completed",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "rpc_observation",
+            "source": "replay_metadata",
             "safe": "0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4",
             "proposalId": "bybit-exploit-tx",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": "replay-R01-bybit-real-safe-unguarded-e2",
             "payload": {
-              "decodeStatus": "SUPPORTED",
-              "intent": {
-                "action": "DELEGATECALL",
-                "target": "0x96221423681A6d52E184D440a8eFCEbB105C7242"
-              },
-              "intentHash": "0x304a9690ecef6e0c9347b1248960b54cca7181e8e3d017b722506b8716dc50d5",
-              "targetCodeHash": "0x45d9a8c68dabd5d52d651632cd9e06e947eb1ecd4d799f19a5bc78f3045ca23f"
+              "decodeStatus": "NOT_CAPTURED",
+              "decoderResult": "No saved decoder execution output is available."
             }
           },
           {
@@ -278,14 +192,16 @@
             "sequence": 4,
             "type": "safe.execution_submitted",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "chain_log",
+            "source": "replay_metadata",
             "safe": "0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4",
             "proposalId": "bybit-exploit-tx",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": "replay-R01-bybit-real-safe-unguarded-e3",
             "payload": {
-              "ownerSignatureCount": 1,
+              "ownerSignatureCount": 3,
+              "ownerSignatureSource": "Verichains, Bybit Incident Investigation Preliminary Report v1.0",
+              "ownerSignatureSourceUrl": "https://lazarus.day/media/post/files/2025/02/27/Bybit_Incident_Investigation_-_Preliminary_Report.pdf",
               "operation": 1,
               "guardInstalled": false
             }
@@ -299,7 +215,7 @@
             "sequence": 5,
             "type": "safe.execution_succeeded",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "chain_log",
+            "source": "recorded_chain_observation",
             "safe": "0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4",
             "proposalId": "bybit-exploit-tx",
             "safeTxHash": null,
@@ -319,14 +235,14 @@
       "runB": {
         "fixtureId": "R02",
         "scenarioId": "replay-R02-oursafe-unguarded",
-        "name": "Run B \u00b7 Our Safe 1.4.1 (unguarded)",
+        "name": "Run B · Our Safe 1.4.1 (unguarded)",
         "targetSafe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
         "safeVersion": "1.4.1",
         "guardInstalled": false,
         "slot0Before": "0x0000000000000000000000005615deb798bb3e4dfa0139dfa1b3d433cc23b72f",
         "slot0After": "0x000000000000000000000000bdd077f651ebe7f7b3ce16fe5f2b025be2969516",
         "outcome": "DRAINED",
-        "gasUsed": 135035,
+        "gasUsed": null,
         "events": [
           {
             "schemaVersion": 1,
@@ -337,11 +253,11 @@
             "sequence": 1,
             "type": "proposal.created",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "rpc_observation",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "oursafe-unguarded",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": null,
             "payload": {
               "rawTransaction": {
@@ -366,11 +282,11 @@
             "sequence": 2,
             "type": "safe.execution_submitted",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "chain_log",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "oursafe-unguarded",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": "replay-R02-oursafe-unguarded-e1",
             "payload": {
               "ownerSignatureCount": 1,
@@ -386,16 +302,15 @@
             "sequence": 3,
             "type": "safe.execution_succeeded",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "chain_log",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "oursafe-unguarded",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": "replay-R02-oursafe-unguarded-e2",
             "payload": {
-              "blockNumber": 21895237,
               "receiptStatus": "SUCCESS",
-              "gasUsed": 135035,
+              "gasUsed": null,
               "slot0Before": "0x0000000000000000000000005615deb798bb3e4dfa0139dfa1b3d433cc23b72f",
               "slot0After": "0x000000000000000000000000bdd077f651ebe7f7b3ce16fe5f2b025be2969516",
               "masterCopyReplaced": true
@@ -406,7 +321,7 @@
       "runC": {
         "fixtureId": "R03",
         "scenarioId": "replay-R03-oursafe-guarded",
-        "name": "Run C \u00b7 Our Safe + IntentLock",
+        "name": "Run C · Our Safe + IntentLock",
         "targetSafe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
         "safeVersion": "1.4.1",
         "guardInstalled": true,
@@ -415,7 +330,7 @@
         "outcome": "REVERTED",
         "observedRevertName": "UnsupportedOperation",
         "revertSelector": "0x9ba6061b",
-        "gasUsed": 177034,
+        "gasUsed": null,
         "events": [
           {
             "schemaVersion": 1,
@@ -426,11 +341,11 @@
             "sequence": 1,
             "type": "proposal.created",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "rpc_observation",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "oursafe-guarded",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": null,
             "payload": {
               "rawTransaction": {
@@ -455,11 +370,11 @@
             "sequence": 2,
             "type": "policy.evaluated",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "rpc_observation",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "oursafe-guarded",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": "replay-R03-oursafe-guarded-e1",
             "payload": {
               "decision": "REFUSE_POLICY",
@@ -477,11 +392,11 @@
             "sequence": 3,
             "type": "safe.execution_submitted",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "chain_log",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "oursafe-guarded",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": "replay-R03-oursafe-guarded-e2",
             "payload": {
               "ownerSignatureCount": 1,
@@ -497,17 +412,17 @@
             "sequence": 4,
             "type": "guard.reverted",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "rpc_observation",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "oursafe-guarded",
             "safeTxHash": null,
-            "transactionHash": "0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882",
+            "transactionHash": null,
             "causeEventId": "replay-R03-oursafe-guarded-e3",
             "payload": {
               "observedRevertName": "UnsupportedOperation",
               "revertSelector": "0x9ba6061b",
               "revertData": "0x9ba6061b",
-              "gasUsed": 177034,
+              "gasUsed": null,
               "slot0Preserved": true,
               "slot0": "0x0000000000000000000000005615deb798bb3e4dfa0139dfa1b3d433cc23b72f"
             }
@@ -517,14 +432,14 @@
       "runRA20": {
         "fixtureId": "R04",
         "scenarioId": "replay-R04-noattestation",
-        "name": "Run R-A20 \u00b7 Call without attestation",
+        "name": "Run R-A20 · Call without attestation",
         "targetSafe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
         "safeVersion": "1.4.1",
         "guardInstalled": true,
         "outcome": "REVERTED",
         "observedRevertName": "NoAttestation",
         "revertSelector": "0x4c3218ea",
-        "gasUsed": 200117,
+        "gasUsed": null,
         "events": [
           {
             "schemaVersion": 1,
@@ -535,7 +450,7 @@
             "sequence": 1,
             "type": "proposal.created",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "rpc_observation",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "call-no-attestation",
             "safeTxHash": null,
@@ -563,7 +478,7 @@
             "sequence": 2,
             "type": "safe.execution_submitted",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "chain_log",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "call-no-attestation",
             "safeTxHash": null,
@@ -583,7 +498,7 @@
             "sequence": 3,
             "type": "guard.reverted",
             "occurredAt": "2025-02-21T09:46:43.000Z",
-            "source": "rpc_observation",
+            "source": "foundry_fork_test",
             "safe": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
             "proposalId": "call-no-attestation",
             "safeTxHash": null,
@@ -593,7 +508,7 @@
               "observedRevertName": "NoAttestation",
               "revertSelector": "0x4c3218ea",
               "revertData": "0x4c3218ea",
-              "gasUsed": 200117
+              "gasUsed": null
             }
           }
         ]

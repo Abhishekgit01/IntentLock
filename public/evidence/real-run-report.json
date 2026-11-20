@@ -1,0 +1,482 @@
+{
+  "schemaVersion": 1,
+  "reportGeneratedAt": "2026-11-20T15:31:32.223541+00:00",
+  "runId": "local-anvil-report-no-fixture-results",
+  "source": "local-chain",
+  "isSynthetic": false,
+  "commit": null,
+  "environment": {
+    "chain": "local Anvil / Foundry",
+    "chainId": 31337,
+    "forgeVersion": "1.10.0 (commit 083e22994195d6a7e3ad3104d0b57f478c9b9062)",
+    "solcVersion": "0.8.28",
+    "safeVersion": "1.4.1 (tag v1.4.1, commit bf943f80fec5ac647159d26161446ac5d716a294)",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    }
+  },
+  "summary": {
+    "catalogTotal": 40,
+    "reportedTotal": 0,
+    "missingTotal": 40,
+    "passedTotal": 0,
+    "failedTotal": 0,
+    "criticalCoverage": {
+      "catalogTotal": 25,
+      "reported": 0,
+      "passed": 0,
+      "failed": 0,
+      "missing": 25
+    }
+  },
+  "countsByKind": {
+    "benign": {
+      "catalogTotal": 6,
+      "reported": 0,
+      "passed": 0,
+      "failed": 0,
+      "missing": 6
+    },
+    "attack": {
+      "catalogTotal": 28,
+      "reported": 0,
+      "passed": 0,
+      "failed": 0,
+      "missing": 28
+    },
+    "unknown": {
+      "catalogTotal": 5,
+      "reported": 0,
+      "passed": 0,
+      "failed": 0,
+      "missing": 5
+    },
+    "availability": {
+      "catalogTotal": 1,
+      "reported": 0,
+      "passed": 0,
+      "failed": 0,
+      "missing": 1
+    }
+  },
+  "countsByDecision": {
+    "ATTEST": 0,
+    "ATTEST_WITH_TIMELOCK": 0,
+    "REFUSE_POLICY": 0,
+    "REFUSE_UNSUPPORTED": 0
+  },
+  "countsByExecutionCategory": {
+    "successful_receipt": 0,
+    "policy_refusal": 0,
+    "insufficient_threshold": 0,
+    "observed_guard_safe_revert": 0,
+    "unattempted": 0,
+    "not_run_missing": 40
+  },
+  "observedReverts": {},
+  "fixtures": [],
+  "missingFixtures": [
+    {
+      "fixtureId": "B01",
+      "critical": true,
+      "kind": "benign",
+      "category": "benign",
+      "title": "Allowlisted native transfer under cap",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "B03",
+      "critical": true,
+      "kind": "benign",
+      "category": "benign",
+      "title": "Allowlisted ERC-20 transfer",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "B04",
+      "critical": false,
+      "kind": "benign",
+      "category": "benign",
+      "title": "Bounded token approval",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "B06",
+      "critical": true,
+      "kind": "benign",
+      "category": "benign",
+      "title": "Exact 2-of-3 verifier threshold",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "A01",
+      "critical": true,
+      "kind": "attack",
+      "category": "deception",
+      "title": "Misleading label over delegatecall payload",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "UnsupportedOperation"
+    },
+    {
+      "fixtureId": "A02",
+      "critical": true,
+      "kind": "attack",
+      "category": "deception",
+      "title": "Proposal label conflicts with raw CALL semantics",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "REJECTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "A03",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Destination mutated after signing",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "DigestMismatch"
+    },
+    {
+      "fixtureId": "A04",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Value mutated after signing",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "DigestMismatch"
+    },
+    {
+      "fixtureId": "A05",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Calldata mutated after signing",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "DigestMismatch"
+    },
+    {
+      "fixtureId": "A06",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Operation changed from CALL to DELEGATECALL",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "UnsupportedOperation"
+    },
+    {
+      "fixtureId": "A07",
+      "critical": true,
+      "kind": "benign",
+      "category": "attestation",
+      "title": "Pre-increment nonce binding",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "A08",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Wrong Safe replay",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "WrongSafe"
+    },
+    {
+      "fixtureId": "A09",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Wrong chain replay",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "WrongChain"
+    },
+    {
+      "fixtureId": "A13",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Expired verifier signatures",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "Expired"
+    },
+    {
+      "fixtureId": "A15",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Only one verifier signature",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "AWAITING_THRESHOLD",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "A16",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Duplicate signer cannot satisfy threshold",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "AWAITING_THRESHOLD",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "A19",
+      "critical": true,
+      "kind": "attack",
+      "category": "replay",
+      "title": "Consumed digest replay",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "NoAttestation"
+    },
+    {
+      "fixtureId": "D01",
+      "critical": true,
+      "kind": "unknown",
+      "category": "decoder",
+      "title": "Unknown selector",
+      "expectedDecision": "REFUSE_UNSUPPORTED",
+      "expectedStatus": "QUARANTINED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "D02",
+      "critical": true,
+      "kind": "unknown",
+      "category": "decoder",
+      "title": "Malformed short calldata",
+      "expectedDecision": "REFUSE_UNSUPPORTED",
+      "expectedStatus": "QUARANTINED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "D03",
+      "critical": false,
+      "kind": "unknown",
+      "category": "decoder",
+      "title": "Trailing ambiguous calldata bytes",
+      "expectedDecision": "REFUSE_UNSUPPORTED",
+      "expectedStatus": "QUARANTINED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "D04",
+      "critical": false,
+      "kind": "unknown",
+      "category": "decoder",
+      "title": "Contract interaction target has no code",
+      "expectedDecision": "REFUSE_UNSUPPORTED",
+      "expectedStatus": "QUARANTINED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "D05",
+      "critical": false,
+      "kind": "attack",
+      "category": "decoder",
+      "title": "Proxy implementation changes after review",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "ImplementationMismatch"
+    },
+    {
+      "fixtureId": "P01",
+      "critical": true,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Unlimited ERC-20 approval",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "REJECTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "P02",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "NFT operator approval",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "REJECTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "P03",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Transfer to non-allowlisted recipient",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "REJECTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "P04",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Transfer exceeds configured amount cap",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "REJECTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "P05",
+      "critical": false,
+      "kind": "unknown",
+      "category": "policy",
+      "title": "Unsupported permit authorization",
+      "expectedDecision": "REFUSE_UNSUPPORTED",
+      "expectedStatus": "QUARANTINED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "H01",
+      "critical": true,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to remove guard",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "PolicyDenied"
+    },
+    {
+      "fixtureId": "H02",
+      "critical": true,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to enable module",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "PolicyDenied"
+    },
+    {
+      "fixtureId": "H03",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to disable module",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "PolicyDenied"
+    },
+    {
+      "fixtureId": "H04",
+      "critical": true,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to change Safe implementation",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "PolicyDenied"
+    },
+    {
+      "fixtureId": "H05",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to change owner threshold",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "PolicyDenied"
+    },
+    {
+      "fixtureId": "H06",
+      "critical": true,
+      "kind": "attack",
+      "category": "timelock",
+      "title": "Execute guard replacement before readyAt",
+      "expectedDecision": "ATTEST_WITH_TIMELOCK",
+      "expectedStatus": "TIMELOCK_PENDING",
+      "expectedRevert": "TimelockNotReady"
+    },
+    {
+      "fixtureId": "H08",
+      "critical": true,
+      "kind": "attack",
+      "category": "integration",
+      "title": "Safe module execution route",
+      "expectedDecision": "REFUSE_POLICY",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "GS104"
+    },
+    {
+      "fixtureId": "F01",
+      "critical": true,
+      "kind": "availability",
+      "category": "availability",
+      "title": "Registry/RPC/verifier unavailable",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "RegistryUnavailable"
+    },
+    {
+      "fixtureId": "D06",
+      "critical": false,
+      "kind": "attack",
+      "category": "decoder",
+      "title": "Direct target runtime code hash changes after attestation",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "TargetCodeHashMismatch"
+    },
+    {
+      "fixtureId": "H09",
+      "critical": false,
+      "kind": "benign",
+      "category": "timelock",
+      "title": "Execute allowlisted guard replacement after readyAt",
+      "expectedDecision": "ATTEST_WITH_TIMELOCK",
+      "expectedStatus": "EXECUTED",
+      "expectedRevert": null
+    },
+    {
+      "fixtureId": "H10",
+      "critical": false,
+      "kind": "attack",
+      "category": "timelock",
+      "title": "Cancelled guard replacement cannot execute",
+      "expectedDecision": "ATTEST_WITH_TIMELOCK",
+      "expectedStatus": "CANCELLED",
+      "expectedRevert": "TimelockCancelled"
+    },
+    {
+      "fixtureId": "H11",
+      "critical": false,
+      "kind": "attack",
+      "category": "integration",
+      "title": "Untrusted caller cannot consume an attestation",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "OnlyGuard"
+    },
+    {
+      "fixtureId": "A20",
+      "critical": false,
+      "kind": "attack",
+      "category": "deception",
+      "title": "Supported CALL with zero verifier attestations",
+      "expectedDecision": "ATTEST",
+      "expectedStatus": "EXECUTION_FAILED",
+      "expectedRevert": "NoAttestation"
+    }
+  ],
+  "failures": []
+}

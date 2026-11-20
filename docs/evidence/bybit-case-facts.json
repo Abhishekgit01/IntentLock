@@ -1,0 +1,10 @@
+{
+  "safeTransactionCount": 1,
+  "approvingSignerCount": 3,
+  "signerCountSource": {
+    "name": "Verichains, Bybit Incident Investigation Preliminary Report v1.0",
+    "url": "https://lazarus.day/media/post/files/2025/02/27/Bybit_Incident_Investigation_-_Preliminary_Report.pdf",
+    "page": 2
+  },
+  "scopeNote": "This replay covers the Safe transaction that changed the wallet implementation. Later asset-sweep transactions are outside this replay."
+}

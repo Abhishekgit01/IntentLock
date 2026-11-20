@@ -14,6 +14,7 @@ export const PAGES = [
   { to: '/verifiers', label: 'Verifiers' },
   { to: '/lifecycle', label: 'Lifecycle' },
   { to: '/evidence', label: 'Evidence' },
+  { to: '/onboard', label: 'Policy Studio' },
   { to: '/threats', label: 'Threat model' },
 ]
 
@@ -149,7 +150,7 @@ function Footer() {
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-8 px-5 py-14 md:px-10">
         <div>
           <p className="display-type text-[clamp(3rem,9vw,7.5rem)]">IntentLock<span className="text-flame">.</span></p>
-          <p className="mt-5 max-w-md text-on-contrast/70">Verified chain and replay defense. Real local Anvil chain (chainId 31337) and mainnet fork execution evidence against Safe 1.4.1 smart accounts.</p>
+          <p className="mt-5 max-w-md text-on-contrast/70">Local Anvil contract checks and a fork replay of the historical Bybit transaction.</p>
         </div>
         <ul className="grid grid-cols-2 gap-x-10 gap-y-2 font-display text-lg font-bold uppercase">
           {PAGES.map((p) => (
