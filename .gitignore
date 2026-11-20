@@ -1,0 +1,31 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# JavaScript dependencies and generated builds
+node_modules/
+dist/
+coverage/
+
+# Foundry build output and local chain runs
+out/
+cache/
+broadcast/
+*.log
+
+# Python local environments and bytecode
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Locally generated evidence reports (keep the checked-in synthetic sample)
+/report.json
+/docs/evidence/report*.json
+/docs/evidence/run-*-report.json
+
+# OS metadata
+.DS_Store
+Thumbs.db

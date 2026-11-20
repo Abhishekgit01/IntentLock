@@ -1,0 +1,25 @@
+{
+  "chainId": 31337,
+  "guard": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+  "guardCodeHash": "0x08be930cb38803d191632fec62271082a1cac4a7f4ab05e3a8396eb58c6db6c7",
+  "policyHash": "0xcdf6a0fa1d715cdf09063922df133670750e3b54e2e397d76902b7f881819253",
+  "registry": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  "registryCodeHash": "0xd539fd49106f93495d46b57ea16193e0eb236d4e3aaa3de330c2acad1c060203",
+  "safe": "0xEc69D5C2466c7f6461496f5339A92E36D8404f86",
+  "safeCodeHash": "0x3ffcdb67f07bad4e45b22ca6f8aef57e2b96011bd6578b16e62b560ef91fc0dc",
+  "safeModulesEmpty": true,
+  "safeNonce": 1,
+  "safeOwner": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+  "safeProxyFactory": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+  "safeResolvedCommit": "bf943f80fec5ac647159d26161446ac5d716a294",
+  "safeSingleton": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "safeSingletonCodeHash": "0x17bd93b91a1a3bcd035301ece18adb8dae9b390be60239b2b3f2f2154493236d",
+  "safeVersion": "1.4.1",
+  "verifierSetId": "0x0da8fbd47d9ccb96bb569fa7d70ca5259d6d0e5ecab7eb5fbf868c9f08c64ffa",
+  "verifierThreshold": 2,
+  "verifiers": [
+    "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+    "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"
+  ]
+}
