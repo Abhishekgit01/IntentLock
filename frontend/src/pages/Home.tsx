@@ -13,14 +13,13 @@ export default function Home() {
   return (
     <>
       <section className="relative overflow-hidden">
-        <div aria-hidden className="float-a absolute -left-24 top-40 size-72 rounded-full bg-flame/15" />
-        <div aria-hidden className="float-b absolute right-[-6rem] top-[28rem] size-56 rounded-full border-[14px] border-flame/25" />
-        <div className="relative mx-auto grid max-w-[1280px] items-center gap-12 px-5 pb-28 pt-36 md:px-10 md:pt-44 lg:grid-cols-12">
+        <div aria-hidden className="float-a absolute -left-24 top-7 size-72 rounded-full bg-flame/15" />
+        <div aria-hidden className="float-b absolute right-[-6rem] top-[24rem] size-56 rounded-full border-[14px] border-flame/25" />
+        <div className="relative mx-auto grid max-w-[1280px] items-center gap-12 px-5 pb-28 pt-24 md:px-10 md:pt-[6.5rem] lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <p className="eyebrow">Security guard for crypto multisig wallets</p>
             <Headline
               parts={[{ t: 'Your signers clicked' }, { t: 'Confirm.', hl: true }, { t: 'The screen lied.', em: true, br: true }]}
-              className="display-type mt-6 text-[clamp(2.85rem,6.3vw,5.75rem)]"
+              className="display-type text-[clamp(2.85rem,6.3vw,5.75rem)]"
             />
             <Reveal delay={0.35} y={18}>
               <p className="mt-8 max-w-xl font-display text-2xl font-bold leading-snug tracking-tight md:text-3xl">
@@ -41,7 +40,7 @@ export default function Home() {
               </div>
             </Reveal>
           </div>
-          <div className="relative lg:col-span-5">
+          <div className="relative lg:col-span-5 lg:-translate-y-16">
             <Reveal delay={0.25} y={32} scale={0.96}>
               <Tilt>
                 <SafeBoundary label="The verifier globe">
