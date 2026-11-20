@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity >=0.8.19 <0.9.0;
 
 import {BaseGuard} from "@safe-global/safe-smart-account/contracts/base/GuardManager.sol";
 import {Enum} from "@safe-global/safe-smart-account/contracts/common/Enum.sol";

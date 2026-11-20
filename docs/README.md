@@ -23,10 +23,11 @@ This folder turns the project brief into an implementation reference. The Figma 
 17. [Third-party notices](THIRD_PARTY.md) — candidate reference/reuse inventory and license checks.
 18. [UI/backend integration prompt](UI_BACKEND_INTEGRATION_PROMPT.md) — copyable instructions for adapting the existing Figma UI without replacing its current work.
 19. [Backend package](../backend/README.md) — local API endpoints, configuration, supported scope, and current integration limits.
+20. [Quai Orchard integration](QUAI_ORCHARD.md) — sponsor network, isolated compiler/deployment path, key boundaries, and deployment evidence requirements.
 
 ## Source and status
 
-These documents specify IntentLock as a proof of concept using a local EVM, a Safe multisig, independent intent verifiers, and an on-chain guard. They were prepared from the project brief supplied by the project owner. Safe hook/nonce/module details have been checked against Safe Smart Account `v1.4.1`; incident and product claims remain individually tracked in [CLAIMS_REGISTER.md](CLAIMS_REGISTER.md).
+These documents specify IntentLock as a proof of concept using a local EVM for deterministic development, a Safe multisig, independent intent verifiers, and an on-chain guard. A separate Orchard Cyprus-1 path is required for sponsor evaluation and is tracked in [QUAI_ORCHARD.md](QUAI_ORCHARD.md). Safe hook/nonce/module details have been checked against Safe Smart Account `v1.4.1`; incident and product claims remain individually tracked in [CLAIMS_REGISTER.md](CLAIMS_REGISTER.md).
 
 These are implementation specifications, not evidence that every feature is already implemented, audited, or production-safe. The backend currently has a first local API slice; it cannot submit attestations to an on-chain registry or execute a Safe transaction. Open design decisions are called out explicitly instead of being silently treated as settled facts.
 

@@ -23,6 +23,7 @@ These instructions apply to AI coding agents and human contributors working in t
 - Reference fixture IDs in Foundry test names (for example, `test_A03_digestMismatch`) so test output maps directly to catalog/report rows.
 - Do not build TRACE (B3) in parallel. It becomes primary only if the hour-12 gate in `docs/DELIVERY_PLAN.md` is reached and the project lead switches scope.
 - Do not alter the project owner's UI/Figma decisions. Keep frontend work aligned to the published API/state contract.
+- Quai sponsor work uses only the isolated Orchard Cyprus-1 target in [docs/QUAI_ORCHARD.md](docs/QUAI_ORCHARD.md). Keep Anvil keys and manifests separate; never broadcast unless a human explicitly approves the exact deployment after review. Anvil results are not Quai deployment evidence.
 
 ## Before completing a change
 

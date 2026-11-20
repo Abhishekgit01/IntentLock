@@ -7,8 +7,9 @@ This repository has a Node.js backend scaffold and a first Foundry contract slic
 | Tool | Pin / selection | Status |
 |---|---|---|
 | Safe Smart Account | `v1.4.1` tag; record the resolved revision and package integrity when installing | Selected; source and hook behavior are documented in [PROTOCOL.md](PROTOCOL.md) |
-| Safe release compiler | Solidity `0.7.6` | Match settings used by the pinned Safe release when building its artifacts |
-| IntentLock Solidity compiler | `0.8.28`, EVM target follows the compiler default | Set in `foundry.toml`; Phase 1 tests compiled successfully in the current workspace. D-023 remains pending until validated on a clean checkout |
+| Safe source version | Safe Smart Account `v1.4.1` | The vendored source has broad pragma bounds. The project compiles that source with local 0.8.28 and Orchard 0.8.19; these are not the canonical upstream 0.7.6 Safe release bytecodes and require human review |
+| Local IntentLock Solidity compiler | `0.8.28`, London EVM | Used by the existing Anvil development and test profile |
+| Orchard IntentLock Solidity compiler | `0.8.19`, London EVM | Separate sponsor target under `quai/`; verified against the conservative limit on Quai's current Solidity support page. The deployment tutorial elsewhere says 0.8.20; see [QUAI_ORCHARD.md](QUAI_ORCHARD.md) |
 | Foundry (`forge`, `anvil`, `cast`) | `1.10.0`, commit `083e22994195d6a7e3ad3104d0b57f478c9b906` observed | Phase 1 tests and local deployment were exercised with this build. D-024 remains pending until the team locks and validates the clean-checkout toolchain |
 | Node.js | `24.22.1` in `backend/.nvmrc` | Backend runtime selected and validated |
 | npm | `11.19.1` via the backend's `packageManager` field | Backend package manager selected and validated |
@@ -58,7 +59,11 @@ anvil --version
 cast --version
 ```
 
-The Solidity slice and `foundry.toml` are present. The version above describes the current environment only; it is not yet the project-wide Foundry pin. Resolve D-023 and D-024 after validating a clean checkout.
+The Solidity slice and `foundry.toml` are present. The `quai/` package builds a separate Orchard artifact set and provides a read-only chain preflight plus a guarded deploy script. This is deployment tooling, not proof of a Quai deployment. Resolve clean-checkout toolchain pins and complete the human contract reviews before using the broadcast path.
+
+## 7. Quai Orchard sponsor target
+
+Use the project-specific steps in [Quai Orchard integration](QUAI_ORCHARD.md). They compile with Solidity 0.8.19 and London EVM into `out-quai/`, run a read-only RPC check, and require a dedicated testnet wallet plus a deliberate broadcast gate. The official endpoint and chain ID were checked against Quai documentation on 2026-11-20. Do not copy any upstream `.env` or Anvil private key.
 
 ## 4. Local runtime configuration
 

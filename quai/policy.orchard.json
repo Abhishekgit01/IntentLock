@@ -1,0 +1,13 @@
+{
+  "schema": "intentlock.policy.v1",
+  "schemaVersion": 1,
+  "native": {
+    "maxTransferWei": "100000000000000000000",
+    "allowedRecipients": ["0x71c7656ec7ab88b098defb751b7401b5f6d8e4a1"]
+  },
+  "erc20": {
+    "maxTransferBaseUnits": "0",
+    "allowedRecipients": [],
+    "tokens": []
+  }
+}

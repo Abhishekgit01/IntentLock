@@ -2,7 +2,7 @@
 
 ## 1. Deployment model
 
-Deploy to a fresh Anvil chain from deterministic scripts. Pin Solidity compiler, optimizer settings, Safe release/commit, and all dependency versions. Do not use a floating “latest” Safe artifact. The deployment script records chain ID, contract addresses, code hashes, owner addresses, verifier set, threshold, timelock delay, initial vault balance, and fixture identifiers in a machine-readable deployment manifest.
+Use a fresh Anvil chain for deterministic tests and the separate sponsor-required Orchard Cyprus-1 path for a public testnet deployment. Keep the scripts, chain IDs, keys, and manifests separate. Pin Solidity compiler, optimizer settings, Safe release/commit, and all dependency versions. Do not use a floating “latest” Safe artifact. Each deployment manifest records its actual chain ID, contract addresses, code hashes, owner addresses, verifier set, threshold, timelock configuration when implemented, and fixture identifiers. See [QUAI_ORCHARD.md](QUAI_ORCHARD.md) for the Orchard-specific compiler and network gate.
 
 Use the actual Safe Smart Account `v1.4.1` integration for Safe-specific claims and record the exact resolved revision. A mock may be used for isolated unit tests only; it is not evidence of Safe compatibility. The tagged source details and verified hook/nonce/module behavior are documented in [PROTOCOL.md](PROTOCOL.md).
 

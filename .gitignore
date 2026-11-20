@@ -12,6 +12,7 @@ coverage/
 
 # Foundry build output and local chain runs
 out/
+out-quai/
 cache/
 broadcast/
 *.log
@@ -26,6 +27,7 @@ __pycache__/
 /report.json
 /docs/evidence/report*.json
 /docs/evidence/run-*-report.json
+/deployments/quai-orchard-cyprus1.json.tmp
 
 # OS metadata
 .DS_Store

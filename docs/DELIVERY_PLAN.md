@@ -83,3 +83,7 @@ The team has 3+ people; assign each role to a named person during Phase 0. Solid
 ## 6. Definition of done
 
 IntentLock is ready for the hackathon demonstration when implementation matches the acceptance criteria in [PRODUCT.md](PRODUCT.md), contract and decoder behavior meet their respective specifications, critical tests in [VERIFICATION.md](VERIFICATION.md) pass, the runbook works from a clean checkout/environment, and every public claim is bounded by observed evidence.
+
+## 7. Sponsor-required Quai deployment
+
+The organizer requires the smart-contract component to be deployed on Quai Orchard Cyprus-1. Keep this as a separate chain target; local Anvil results do not satisfy this gate. The integration is tracked in [QUAI_ORCHARD.md](QUAI_ORCHARD.md). Complete the chain-specific build, read-only preflight, human review, explicit team approval, deployment, post-deploy state checks, and evidence capture before claiming Quai integration is deployed. No broadcast occurs as part of compilation or preflight.

@@ -12,6 +12,8 @@ IntentLock is a prototype Safe multisig guard that binds independent verifiers' 
 
 The current backend slice supports native transfers and policy-configured ERC-20 transfers. Its API, configuration, and limits are documented in [backend/README.md](backend/README.md). The full on-chain Safe registry/guard integration, timelock, end-to-end execution flow, and UI connection are still in progress.
 
+The sponsor-required Quai Orchard Cyprus-1 deployment path is being prepared separately from Anvil. See [docs/QUAI_ORCHARD.md](docs/QUAI_ORCHARD.md) for the verified endpoint, compiler discrepancy, build/preflight commands, deployment safeguards, and current limitations. No Orchard transaction has been broadcast.
+
 ## Project docs
 
 - [Project overview and documentation index](docs/README.md)
@@ -23,6 +25,7 @@ The current backend slice supports native transfers and policy-configured ERC-20
 - [Fixture report format and CLI](docs/evidence/RESULTS_FORMAT.md)
 - [Development setup](docs/SETUP.md)
 - [Demo runbook](docs/DEMO_RUNBOOK.md)
+- [Quai Orchard integration](docs/QUAI_ORCHARD.md)
 
 ## Run the evidence report example
 
