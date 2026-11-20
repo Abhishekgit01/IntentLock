@@ -1,7 +1,37 @@
 # IntentLock
 
-IntentLock is a prototype specification for checking a multisig transaction's decoded intent before execution. It combines independent intent verification with an on-chain Safe guard and a narrowly scoped timelock for one administrative action.
+IntentLock is a prototype Safe multisig guard that binds independent verifiers' structured review of a supported transaction to its exact Safe transaction digest. Before execution, the guard checks the attestation and policy on-chain. Unsupported or mismatched transactions fail closed.
 
-The implementation requirements, trust boundaries, fixture catalog, demo procedures, and evidence rules are in [`docs/README.md`](docs/README.md). The initial backend scaffold is in [`backend/README.md`](backend/README.md). The project owner supplies the complete UI through Figma; this repository documents the system behavior and data contracts the UI consumes.
+## What it does
 
-This repository contains the first backend/API slice plus specifications and planning documents. The Safe registry/guard integration, on-chain execution adapter, complete verifier workflow, and UI connection are still in progress. A documented behavior or API scaffold is not evidence that the full protection flow has been implemented, tested, audited, or made production-ready.
+- Decodes a bounded set of Safe actions and derives a canonical, versioned intent.
+- Uses independent EIP-712 verifier attestations over the transaction digest and intent.
+- Applies policy such as recipient allowlists, amount limits, and exact token code hashes.
+- Rejects `DELEGATECALL` as an unconditional defense-in-depth rule.
+- Records fixture outcomes separately from synthetic examples and UI activity.
+
+The current backend slice supports native transfers and policy-configured ERC-20 transfers. Its API, configuration, and limits are documented in [backend/README.md](backend/README.md). The full on-chain Safe registry/guard integration, timelock, end-to-end execution flow, and UI connection are still in progress.
+
+## Project docs
+
+- [Project overview and documentation index](docs/README.md)
+- [Protocol and API contracts](docs/PROTOCOL.md)
+- [Smart-contract specification](docs/CONTRACTS.md)
+- [Decoder and policy boundaries](docs/DECODER_AND_POLICY.md)
+- [Fixture catalog](docs/fixtures/catalog.json)
+- [Verification and evidence rules](docs/VERIFICATION.md)
+- [Fixture report format and CLI](docs/evidence/RESULTS_FORMAT.md)
+- [Development setup](docs/SETUP.md)
+- [Demo runbook](docs/DEMO_RUNBOOK.md)
+
+## Run the evidence report example
+
+The example results are explicitly synthetic; they demonstrate the report format and are not project test results or chain evidence.
+
+```sh
+python3 scripts/report_fixtures.py docs/evidence/sample-results.synthetic.json
+```
+
+## Safety and scope
+
+IntentLock is a local-chain proof of concept, not an audited or production-ready wallet security product. It does not understand arbitrary calldata or guarantee safe outcomes for supported calls. Unknown and ambiguous calls must fail closed. The UI owner supplies the design through Figma; mocked data must remain labeled and must never be presented as chain evidence.
