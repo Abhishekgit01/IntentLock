@@ -21,6 +21,3 @@ error CompetingProposal();
 error Unauthorized();
 error InvalidSignature();
 error InvalidVerifierSet();
-error PQVerificationFailed();
-error PQKeyNotConfigured();
-error PQModeNotEnabled();

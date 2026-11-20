@@ -13,7 +13,6 @@ This is an inventory of candidates named in the project brief, not a statement t
 | Magic UI | Optional component reference only; UI is owner-managed | Brief reports MIT | Not selected; project owner decides UI dependencies and verifies their licenses |
 | Paper Shaders | Optional visual shader reference named in the review | Reported as PolyForm Shield, not verified against a specific repository/version | Do not copy/use until exact source, applicable license text, restrictions, and attribution are checked; visual implementation is owner-managed |
 | React Flow / Sankey / globe libraries | Visual options named in brief | Per-package licenses not verified here | Not selected; UI owner checks exact packages/licenses if used |
-| ZKNoxHQ/ETHDILITHIUM | ML-DSA-44 (NIST FIPS 204) Dilithium signature verifier in Solidity | MIT License (Copyright 2025–2026 ZKNoxHQ) | Pinned commit `f9f4fe1d84e68304b425e054c273c276fe44ba11` (2026-09-16). Marked **experimental, unaudited**. Used as architecture reference and interface model for IntentLock's hybrid PQ mode. Test suite uses `MockMLDSAVerifier` matching ML-DSA-44 parameter sizes (1312-byte public key, 2420-byte signature) to decouple test reproducibility from unaudited full-EVM lattice math. Safe owner signatures remain ECDSA; this is a simulated adversary test, not a quantum-safety claim. |
 
 ## Reuse record template
 

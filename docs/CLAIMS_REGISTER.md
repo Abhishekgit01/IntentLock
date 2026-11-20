@@ -23,9 +23,6 @@ Keep public statements here before they appear in slides, README copy, demo narr
 | C-017 | Registry consumes only via configured guard | Implemented design rule, not yet code evidence | Planned, not yet verified | After implementation/test only | Contracts lead: test third-party consume rejection |
 | C-018 | 2-of-3 verifier threshold works | Configured goal | Planned, not yet verified | After threshold/replay fixtures pass and addresses are shown | Verifier/contracts leads |
 | C-019 | Measured rejection/acceptance percentages | Must come from generated fixture run | Not yet measured | No percentage until report output exists | Evidence owner: generate report and preserve denominators |
-| C-020 | Hybrid PQ mode rejects an attacker possessing all ECDSA keys if PQ keys are absent or invalid | Tested via fixture Q01 on local Foundry / Safe 1.4.1 | Checked | “When optional PQ mode is enabled, an attacker possessing all verifier ECDSA keys cannot execute or submit without valid PQ signatures.” | Contracts lead: proven by `test_Q01_PQModeAttackerHasECDSAButNoPQ` |
-| C-021 | Hybrid PQ mode executes when both ECDSA and ML-DSA-44 PQ signatures meet threshold | Tested via fixture Q02 on local Foundry / Safe 1.4.1 | Checked | “In PQ hybrid mode, transactions execute when both ECDSA and post-quantum threshold signatures verify over the identical typed digest.” | Contracts lead: proven by `test_Q02_PQModeValidHybridExecutes` |
-| C-022 | ML-DSA-44 implementation is experimental and unaudited; Safe owner signatures remain ECDSA | Architecture and scope boundary in `contracts/MockMLDSAVerifier.sol` and `docs/THIRD_PARTY.md` | Checked | “Safe owner signatures remain ECDSA; IntentLock's hybrid PQ mode is an adversarial simulation test, not a quantum-safety claim.” | Contracts lead + documentation |
 
 ## Publication gate
 
