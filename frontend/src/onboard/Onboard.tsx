@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Upload,
 } from "lucide-react";
+import { Link } from "react-router";
 import {
   ONBOARD_COPY,
   RULE_COPY,
@@ -344,7 +345,18 @@ export default function Onboard() {
   }
 
   return (
-    <div className="mx-auto max-w-[1280px] px-5 pb-16 pt-32 md:px-10">
+    <div className="mx-auto max-w-[1280px] px-5 pb-16 pt-8 md:px-10">
+      <nav
+        aria-label={ONBOARD_COPY.homeLink}
+        className="mb-8 inline-flex rounded-full border-2 border-edge bg-paper/90 px-5 py-2.5 shadow-sm"
+      >
+        <Link
+          to="/"
+          className="font-display text-sm font-extrabold uppercase tracking-tight text-ink transition-colors hover:text-flame motion-reduce:transition-none"
+        >
+          {ONBOARD_COPY.homeLink}
+        </Link>
+      </nav>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-6">
         <div className="max-w-3xl">
           <p className="eyebrow">{ONBOARD_COPY.eyebrow}</p>
@@ -864,6 +876,12 @@ export default function Onboard() {
                   </p>
                 </article>
               </div>
+              <article className="mt-4 rounded-2xl border border-on-contrast/20 p-4">
+                <h3 className="eyebrow text-flame">{ONBOARD_COPY.cliCommandLabel}</h3>
+                <code className="mt-3 block break-all font-mono text-xs text-on-contrast/70">
+                  {ONBOARD_COPY.verifierCommand}
+                </code>
+              </article>
               <div className="mt-6 flex flex-wrap items-center gap-4">
                 <button
                   type="button"

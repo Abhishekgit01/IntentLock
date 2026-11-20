@@ -2,6 +2,7 @@ import type { RuleTag } from "./types";
 
 export const ONBOARD_COPY = {
   eyebrow: "IntentLock onboarding",
+  homeLink: "IntentLock · back to home",
   title: "Turn policy into a verification workflow.",
   introduction:
     "Draft explicit transfer limits, inspect what can be enforced, and prepare a verifier bundle without exposing private keys.",
@@ -104,6 +105,7 @@ export const ONBOARD_COPY = {
     runbook: "intentlock-runbook.md",
   },
   verifierCommand: "npm run intentlock -- conformance --endpoint http://127.0.0.1:8787",
+  cliCommandLabel: "Conformance CLI",
   verifierInstallCommand: "npm ci --prefix backend",
   statusReady: "READY FOR HUMAN REVIEW",
   statusIncomplete: "REVIEW ITEMS REMAIN",

@@ -15,6 +15,7 @@ const workbench = { HydrateFallback: () => null, lazy: async () => ({ Component:
 export const router = createBrowserRouter([
   { path: '/deepdive', ...workbench },
   { path: '/workbench', ...workbench },
+  { path: '/onboard', Component: Onboard },
   {
     path: '/',
     Component: Root,
@@ -25,7 +26,6 @@ export const router = createBrowserRouter([
       { path: 'lifecycle', Component: Lifecycle },
       { path: 'evidence', Component: Evidence },
       { path: 'threats', Component: Threats },
-      { path: 'onboard', Component: Onboard },
       { path: '*', Component: NotFound },
     ],
   },

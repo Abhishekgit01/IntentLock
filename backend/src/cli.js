@@ -222,16 +222,25 @@ async function conformance(args) {
       }
     }
     for (const fixture of catalog.fixtures) {
-      if (fixture.id === 'F01') {
+      if (
+        fixture.id === 'F01' ||
+        fixture.category === 'pq' ||
+        ((fixture.id === 'P01' || fixture.id === 'P02') &&
+          !context.erc20Tokens?.length)
+      ) {
+        const reason =
+          fixture.id === 'F01'
+            ? 'Availability failure is outside a healthy POST /decode decision check.'
+            : fixture.category === 'pq'
+              ? 'PQ signature-mode behavior is outside the ECDSA decoder endpoint.'
+              : 'No allowlisted ERC-20 contract is configured for this approval fixture.';
         catalogResults.push({
           id: fixture.id,
           expectedDecision: fixture.decision,
           actualDecision: null,
           expectedExecutionRevert: fixture.expectedRevert,
-          pass: false,
           notApplicable: true,
-          error:
-            'Availability failure is outside a healthy POST /decode decision check.',
+          reason,
         });
         continue;
       }
@@ -306,6 +315,11 @@ async function conformance(args) {
       catalog: {
         passed: catalogResults.filter((item) => item.pass).length,
         total: catalogResults.length,
+        notApplicable: catalogResults.filter((item) => item.notApplicable)
+          .length,
+        failed: catalogResults.filter(
+          (item) => !item.pass && !item.notApplicable,
+        ).length,
       },
       total: {
         passed: all.filter((item) => item.pass).length,
