@@ -1,12 +1,12 @@
 # IntentLock backend
 
-This is the first backend/API slice. It validates complete Safe transaction fields, asks the configured Safe 1.4.1 contract for the canonical Safe transaction hash, decodes native `CALL` transfers with empty calldata, applies a configured allowlist/cap policy, accepts external EIP-712 verifier signatures, and exposes proposal/event state for the UI.
+This is the current backend/API slice. It validates complete Safe transaction fields, asks the configured Safe 1.4.1 contract for the canonical Safe transaction hash, decodes native `CALL` transfers and canonical allowlisted ERC-20 `transfer(address,uint256)` calls, applies an explicit allowlist/cap policy, accepts external EIP-712 verifier signatures, and exposes proposal/event state for the UI.
 
 It is a local development coordinator, not an execution authority. It does not contain verifier private keys. It does not yet submit the threshold attestation to an on-chain registry or send Safe transactions; `POST /v1/proposals/:proposalId/execute` therefore fails closed with `EXECUTION_ADAPTER_NOT_CONFIGURED`. A UI must never present API threshold approval as an executed or on-chain-approved transaction.
 
 ## Start
 
-Requires Node.js `24.22.1` and npm `11.19.1`, pinned in this package. Copy `.env.example` to `.env`, fill in the local Anvil RPC, deployed Safe address, registry/verifier configuration, a policy cap, and at least one allowed native recipient. Do not put private keys in `.env`.
+Requires Node.js `24.22.1` and npm `11.19.1`, pinned in this package. Copy `.env.example` to `.env`, fill in the local Anvil RPC, deployed Safe address, registry/verifier configuration, a native policy cap and at least one allowed native recipient. ERC-20 support is separately enabled only when token addresses and matching runtime code hashes, ERC-20 recipients, and a base-unit cap are all configured. `POLICY_ERC20_TOKEN_CODE_HASHES` entries correspond positionally to `POLICY_ALLOWED_ERC20_TOKENS`. Do not put private keys in `.env`.
 
 ```sh
 npm ci
@@ -30,7 +30,7 @@ The server binds to `127.0.0.1:8787` by default. Browser origins must be listed 
 | `POST /v1/proposals/:proposalId/attestations` | Verifies an external EIP-712 EOA signature against the exact proposal fields, configured verifier set, registry domain, chain time, and expiry rules. It stores the signature in memory only; it does not submit to a registry. |
 | `POST /v1/proposals/:proposalId/execute` | Intentionally unavailable until registry submission and Safe execution adapters exist. Never sends a transaction in this version. |
 
-The first decoder subset accepts only native `CALL` transfers with empty calldata to an EOA. It hard-refuses `DELEGATECALL`, quarantines other transaction shapes, and refuses transfers when policy configuration is missing, the recipient is not allowlisted, or the amount exceeds the cap. It does not yet decode ERC-20 or the timelocked guard-replacement flow.
+The decoder accepts native `CALL` transfers with empty calldata to an EOA and canonical ERC-20 `transfer(address,uint256)` calls to configured tokens whose live runtime code hash matches the configured hash. ERC-20 amounts stay in base units; the backend does not trust token metadata such as decimals or symbols for policy. ERC-20 transfers require zero native value, an allowlisted recipient, and an amount within the configured cap. ERC-20 approvals are always refused; unknown contracts/selectors, malformed or non-canonical calldata, and calldata calls to addresses without code are quarantined. It hard-refuses `DELEGATECALL`. The timelocked guard-replacement flow and on-chain registry submission/Safe execution are not implemented in this backend slice.
 
 ## Proposal request
 

@@ -45,7 +45,7 @@ Copy this prompt into the AI environment that has the nearly finished UI and its
 > ## Current limitations to represent accurately
 >
 > - The API stores state in memory and clears it on backend restart.
-> - The first decoder only supports native `CALL` transfers with empty calldata to an EOA. It denies `DELEGATECALL` and quarantines other shapes.
+> - The decoder supports native `CALL` transfers with empty calldata to an EOA and canonical ERC-20 `transfer(address,uint256)` calls to configured tokens with an exact runtime code-hash match. ERC-20 amounts are shown in base units unless the UI separately retrieves token display metadata; policy always uses base units. ERC-20 approvals are refused. Unknown contracts/selectors, malformed calldata, and calldata calls to addresses without code are quarantined. `DELEGATECALL` is refused.
 > - The backend can verify external EIP-712 signatures only when the configured registry address has code, but does not yet submit attestations to the registry.
 > - Safe execution is not implemented in the backend. Do not show a working execute flow; show the backend's `EXECUTION_ADAPTER_NOT_CONFIGURED` result as a clear disabled/coming integration state in the existing UI.
 > - Mock data must remain clearly labeled and must never be mixed into a real-chain evidence view.

@@ -48,6 +48,20 @@ function readAddressList(name, value) {
   return addresses;
 }
 
+function readBytes32List(name, value) {
+  if (!value?.trim()) return [];
+  const values = value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  for (const item of values) {
+    if (!isHex(item, { strict: true }) || item.length !== 66) {
+      throw new Error(`${name} entries must be 32-byte hex values`);
+    }
+  }
+  return values;
+}
+
 function readOptionalBytes32(name, value) {
   if (!value) return undefined;
   if (!isHex(value, { strict: true }) || value.length !== 66) {
@@ -88,6 +102,12 @@ export function loadConfig(env = process.env) {
       'POLICY_MAX_NATIVE_TRANSFER_WEI must be a decimal integer string',
     );
   }
+  const erc20Cap = env.POLICY_MAX_ERC20_TRANSFER_BASE_UNITS;
+  if (erc20Cap && !/^(0|[1-9][0-9]*)$/.test(erc20Cap)) {
+    throw new Error(
+      'POLICY_MAX_ERC20_TRANSFER_BASE_UNITS must be a decimal integer string',
+    );
+  }
   if (env.RPC_URL) {
     const rpcUrl = new URL(env.RPC_URL);
     if (!['http:', 'https:'].includes(rpcUrl.protocol)) {
@@ -105,6 +125,23 @@ export function loadConfig(env = process.env) {
   const nativeRecipients = readAddressList(
     'POLICY_ALLOWED_NATIVE_RECIPIENTS',
     env.POLICY_ALLOWED_NATIVE_RECIPIENTS,
+  );
+  const erc20Tokens = readAddressList(
+    'POLICY_ALLOWED_ERC20_TOKENS',
+    env.POLICY_ALLOWED_ERC20_TOKENS,
+  );
+  const erc20TokenCodeHashes = readBytes32List(
+    'POLICY_ERC20_TOKEN_CODE_HASHES',
+    env.POLICY_ERC20_TOKEN_CODE_HASHES,
+  );
+  if (erc20Tokens.length !== erc20TokenCodeHashes.length) {
+    throw new Error(
+      'POLICY_ERC20_TOKEN_CODE_HASHES must contain one code hash for each POLICY_ALLOWED_ERC20_TOKENS entry in the same order',
+    );
+  }
+  const erc20Recipients = readAddressList(
+    'POLICY_ALLOWED_ERC20_RECIPIENTS',
+    env.POLICY_ALLOWED_ERC20_RECIPIENTS,
   );
   if (
     verifierAddresses.length > 0 &&
@@ -144,7 +181,13 @@ export function loadConfig(env = process.env) {
     maxAttestationSeconds,
     maxFutureClockSkewSeconds,
     maxNativeTransferWei: policyCap ? BigInt(policyCap) : undefined,
+    maxErc20TransferBaseUnits: erc20Cap ? BigInt(erc20Cap) : undefined,
     nativeRecipients,
+    erc20Tokens: erc20Tokens.map((address, index) => ({
+      address,
+      codeHash: erc20TokenCodeHashes[index],
+    })),
+    erc20Recipients,
     allowedOrigins,
   });
 }

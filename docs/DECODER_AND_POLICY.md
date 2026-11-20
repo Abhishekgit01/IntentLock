@@ -18,7 +18,7 @@ Keep the first supported set small and enumerate it in a versioned policy file. 
 
 1. Native token `CALL` transfer with empty calldata, explicit recipient and amount.
 2. ERC-20 `transfer(address,uint256)` to an allowlisted token contract, with token metadata treated as display metadata rather than a security fact.
-3. ERC-20 `approve(address,uint256)` only with explicit spender and amount; unlimited approvals are high-risk or denied by policy.
+3. ERC-20 `approve(address,uint256)` only after a future explicit approval policy is specified; the current backend slice refuses every approval.
 4. A narrowly defined benign fixture for an ordinary Safe-owned action if needed for the demo.
 5. Explicit administrative calls needed to test guard/timelock self-protection, each with a structured action and high-risk classification.
 
@@ -67,6 +67,8 @@ Do not put inferred symbol/name/decimals in the canonical hash unless verified a
 | `SAFE_GUARD_REPLACEMENT` | `setGuard(nonzero allowlisted guard)` | Sole `ATTEST_WITH_TIMELOCK` action |
 | `SAFE_ADMIN_CHANGE` | Guard removal, owners, threshold, modules, fallback handler | `REFUSE_POLICY` in initial policy |
 | `UNKNOWN` | Unknown selector/ambiguous code/proxy | `REFUSE_UNSUPPORTED` and workflow `QUARANTINED` |
+
+The implemented backend slice is narrower than the future policy table: it attests only allowlisted native transfers and allowlisted ERC-20 `transfer` calls. It refuses every `approve`, including bounded approvals, until a separate decision and fixture-backed policy explicitly enable that behavior.
 
 A native transfer to an EOA legitimately has `targetCodeHash == 0`; this is not a missing-code error. An EOA used where a contract method is required is unsupported. Keep those cases distinct in the decoder and policy.
 

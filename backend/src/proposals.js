@@ -300,7 +300,7 @@ export function createProposalService({ client, config, store }) {
         proposal,
         'decode.started',
         {
-          decoderVersion: 'native-transfer-v1',
+          decoderVersion: 'native-erc20-transfer-v1',
         },
         lastEvent.eventId,
       );
@@ -367,7 +367,7 @@ export function createProposalService({ client, config, store }) {
           config.verifierSetId && config.verifierAddresses.length,
         ),
         verifierThreshold: config.verifierThreshold,
-        supportedActions: ['native.transfer'],
+        supportedActions: ['native.transfer', 'erc20.transfer'],
         registryConfigured: Boolean(config.registryAddress),
         registrySubmissionAvailable: false,
         safeExecutionAvailable: false,

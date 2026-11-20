@@ -34,7 +34,7 @@ The team has 3+ people and Solidity capability varies. Assign named owners at ki
 | D-026 | Fixture suite size | All candidates; arbitrary cuts; critical set + target 40 | **25 specified critical fixtures, 15 recommended; exact 40-entry catalog — locked** | Evidence owner | Before first report generation |
 | D-027 | Team assignments | Role-only; named responsibilities | **3+ people, Solidity capability varies — assign capable author and second human reviewer by name** | Project lead | Kickoff / before contract code |
 | D-028 | Visual palette / Figma direction | Define here; owner-managed Figma | **Out of scope for this repo spec — project owner decides and documents in Figma** | Project owner | No code-spec deadline |
-| D-029 | Canonical intent and policy hash encoding | Canonical JSON hash; EIP-712 typed intent; ad hoc ABI packing | **EIP-712 `IntentV1` / `IntentAction` with the `IntentLockIntent` domain; policy hash is the typed ABI commitment to the sorted native recipient set and cap — locked in PROTOCOL.md** | Protocol + contracts leads | Share known-answer vectors before attestation signatures are used |
+| D-029 | Canonical intent and policy hash encoding | Canonical JSON hash; EIP-712 typed intent; ad hoc ABI packing | **EIP-712 `IntentV1` / `IntentAction` with the `IntentLockIntent` domain; policy hash commits to sorted native/ERC-20 recipient sets, native/ERC-20 caps, and sorted token address/runtime-code-hash pairs — locked in PROTOCOL.md** | Protocol + contracts leads | Share known-answer vectors before attestation signatures are used |
 
 ## Safe source verification
 
