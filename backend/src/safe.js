@@ -3,6 +3,7 @@ import { createPublicClient, http, parseAbi } from 'viem';
 export const SAFE_ABI = parseAbi([
   'function VERSION() view returns (string)',
   'function nonce() view returns (uint256)',
+  'function getModulesPaginated(address start,uint256 pageSize) view returns (address[] array,address next)',
   'function getTransactionHash(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 _nonce) view returns (bytes32)',
 ]);
 

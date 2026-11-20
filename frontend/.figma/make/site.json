@@ -1,0 +1,10 @@
+{
+  "description": "Explore how IntentLock protects crypto multisig wallets by verifying transaction intent, blocking malicious transfers, and demonstrating security outcomes for signers and reviewers.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

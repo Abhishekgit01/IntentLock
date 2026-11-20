@@ -61,7 +61,7 @@ contract IntentLockSliceTest is Test {
     address internal verifier3;
 
     bytes32 internal verifierSetId = keccak256("VERIFIER_SET_V1");
-    bytes32 internal policyHash = keccak256("POLICY_V1_HASH");
+    bytes32 internal policyHash;
 
     address internal admin = address(0xAD);
     address internal recipient;
@@ -76,6 +76,7 @@ contract IntentLockSliceTest is Test {
         verifier2 = vm.addr(verifierKey2);
         verifier3 = vm.addr(verifierKey3);
         recipient = makeAddr("allowlistedRecipient");
+        policyHash = _policyHashFor(recipient);
 
         // 1. Deploy actual Safe v1.4.1 singleton and proxy
         safeMasterCopy = new Safe();
@@ -170,6 +171,30 @@ contract IntentLockSliceTest is Test {
             validUntil: uint64(block.timestamp + 1 hours),
             proposalId: keccak256(abi.encodePacked("PROPOSAL_", safeNonce))
         });
+    }
+
+    function _policyHashFor(address allowedRecipient) internal pure returns (bytes32) {
+        bytes32 policyTypeHash = keccak256(
+            "PolicyV1(uint32 schemaVersion,uint256 maxNativeTransferWei,bytes32 nativeRecipientSetHash,bytes32 erc20TokenMapHash,bytes32 erc20RecipientSetHash,uint256 maxErc20TransferBaseUnits)"
+        );
+        address[] memory nativeRecipients = new address[](1);
+        nativeRecipients[0] = allowedRecipient;
+        address[] memory noAddresses = new address[](0);
+        bytes32[] memory noCodeHashes = new bytes32[](0);
+        bytes32 nativeRecipientSetHash = keccak256(abi.encode(nativeRecipients));
+        bytes32 erc20TokenMapHash = keccak256(abi.encode(noAddresses, noCodeHashes));
+        bytes32 erc20RecipientSetHash = keccak256(abi.encode(noAddresses));
+        return keccak256(
+            abi.encode(
+                policyTypeHash,
+                uint32(1),
+                100 ether,
+                nativeRecipientSetHash,
+                erc20TokenMapHash,
+                erc20RecipientSetHash,
+                uint256(0)
+            )
+        );
     }
 
     // ==========================================

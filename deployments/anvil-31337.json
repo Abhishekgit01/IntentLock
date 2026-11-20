@@ -1,8 +1,10 @@
 {
+  "allowedNativeRecipient": "0x71c7656eC7ab88b098DeFB751b7401b5f6d8E4a1",
   "chainId": 31337,
   "guard": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
-  "guardCodeHash": "0x08be930cb38803d191632fec62271082a1cac4a7f4ab05e3a8396eb58c6db6c7",
-  "policyHash": "0xcdf6a0fa1d715cdf09063922df133670750e3b54e2e397d76902b7f881819253",
+  "guardCodeHash": "0x0f1249599924426b191485679c2f6dd336e1577335e24b93b2ff4563a7fc14fc",
+  "maxNativeTransferWei": "100000000000000000000",
+  "policyHash": "0x7dad8009dda04299425de2615d48d06a6c20011e5ce0c5a4029d7a00c59a5643",
   "registry": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
   "registryCodeHash": "0xd539fd49106f93495d46b57ea16193e0eb236d4e3aaa3de330c2acad1c060203",
   "safe": "0xEc69D5C2466c7f6461496f5339A92E36D8404f86",
