@@ -1,6 +1,6 @@
 # Development setup
 
-This repository has a Node.js backend scaffold. The Solidity and frontend application scaffolds are still pending. This document distinguishes verified backend setup from proposed or pending contract and UI toolchains; do not call a pending step reproducible.
+This repository has a Node.js backend, a first Foundry contract slice, and the Figma/web UI connected to live Safe context and proposal-analysis APIs. The scripted story scenes remain synthetic. This document distinguishes steps exercised in the current workspace from toolchain choices that still need a clean-checkout lock.
 
 ## 1. Toolchain pins and status
 
@@ -8,13 +8,13 @@ This repository has a Node.js backend scaffold. The Solidity and frontend applic
 |---|---|---|
 | Safe Smart Account | `v1.4.1` tag; record the resolved revision and package integrity when installing | Selected; source and hook behavior are documented in [PROTOCOL.md](PROTOCOL.md) |
 | Safe release compiler | Solidity `0.7.6` | Match settings used by the pinned Safe release when building its artifacts |
-| IntentLock Solidity compiler | `0.8.24`, EVM target `cancun` is a proposed starting point | Not yet locked in `foundry.toml` or compiled; D-023 remains pending until the contract scaffold exists and the team validates the setting |
-| Foundry (`forge`, `anvil`, `cast`) | Exact release/commit required | D-024 remains pending. `foundryup` commands below bootstrap/install Foundry but do not pin an immutable release. Record an exact version/commit in the project toolchain before calling contract setup reproducible |
+| IntentLock Solidity compiler | `0.8.28`, EVM target follows the compiler default | Set in `foundry.toml`; Phase 1 tests compiled successfully in the current workspace. D-023 remains pending until validated on a clean checkout |
+| Foundry (`forge`, `anvil`, `cast`) | `1.10.0`, commit `083e22994195d6a7e3ad3104d0b57f478c9b906` observed | Phase 1 tests and local deployment were exercised with this build. D-024 remains pending until the team locks and validates the clean-checkout toolchain |
 | Node.js | `24.22.1` in `backend/.nvmrc` | Backend runtime selected and validated |
 | npm | `11.19.1` via the backend's `packageManager` field | Backend package manager selected and validated |
 | Fastify | `5.12.8` in `backend/package.json` | Exact backend dependency pin |
 | viem | `2.58.0` in `backend/package.json` | Exact backend dependency pin |
-| Frontend Node/package manager | Pin in the existing UI project | Pending UI integration; preserve the owner-managed Figma implementation |
+| Frontend Node/package manager | See `frontend/.mise.toml`, `frontend/package.json`, and `frontend/pnpm-lock.yaml` | Live backend connection and production build validated in the current workspace |
 | Python (evidence tooling) | Python 3.10+; standard library only | Reporter sample validated with Python 3.14.6 |
 
 Do not mistake a tool version observed on one contributor's host for the project's required pin. Update this table when a verified project toolchain changes.
@@ -58,7 +58,7 @@ anvil --version
 cast --version
 ```
 
-The contract scaffold and `foundry.toml` are not present yet, and `forge` was not detected in the environment used for this setup check. Choose and record exact Foundry and Solidity versions before the first reproducible contract build.
+The Solidity slice and `foundry.toml` are present. The version above describes the current environment only; it is not yet the project-wide Foundry pin. Resolve D-023 and D-024 after validating a clean checkout.
 
 ## 4. Local runtime configuration
 
@@ -94,13 +94,19 @@ python scripts/report_fixtures.py docs/evidence/sample-results.synthetic.json --
 
 See [evidence/RESULTS_FORMAT.md](evidence/RESULTS_FORMAT.md) for the input format and metric definitions. Reports identify missing fixtures separately; do not present the synthetic sample as measured project results.
 
-## 6. Pending contract and demo commands
+## 6. Foundry slice and local deployment
 
-After Foundry is pinned and the contract scaffold lands, add and validate commands for:
+Start a disposable local chain in one terminal:
 
 ```sh
-forge build
-forge test
+anvil --chain-id 31337
 ```
 
-The later deployment/reset scripts must use disposable Anvil accounts, assert the Safe has no enabled modules, write a deployment manifest, and stop on any failed health assertion. A clean-checkout demo is not reproducible until the contract tests, reset flow, and fixture report all run from their pinned toolchains.
+In another terminal, compile and run the Foundry suite, then deploy the real Safe v1.4.1 singleton/proxy, registry, and guard:
+
+```sh
+forge test -vv
+forge script script/DeployLocal.s.sol:DeployLocal --rpc-url http://127.0.0.1:8545 --broadcast
+```
+
+The deployment script rejects every chain ID except Anvil `31337`, uses disposable Anvil accounts, configures an empty Safe module set, and writes `deployments/anvil-31337.json` with addresses and runtime code hashes. Re-running requires a fresh Anvil chain because the script deploys at deterministic sender nonces. This is the Phase 1 slice; a clean-checkout demo is not reproducible until the remaining verifier, reset flow, and fixture evidence export are implemented and validated.
