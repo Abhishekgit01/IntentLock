@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Bar, BarChart, LabelList, PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
-import { Check, ChevronDown, FileSearch, X } from 'lucide-react'
+import { Check, ChevronDown, Cpu, FileSearch, Flame, ShieldCheck, X } from 'lucide-react'
 import { EVIDENCE, txFor, type FixtureCategory } from '@/lib/data'
 import { SCRIPTS } from '@/lib/script'
 import { useIntentLock } from '@/lib/useIntentLockEvents'
@@ -10,9 +10,32 @@ import { CopyButton, CountUp, HashDiff, PageHeader, Reveal, SafeBoundary, Synthe
 
 const CATS: FixtureCategory[] = ['UI spoof', 'Signer device', 'Verifier set', 'Guard logic', 'Legitimate']
 
+interface RunData {
+  recordedAt: string
+  environment: {
+    chain: string
+    chainId: number
+    forgeVersion: string
+    solcVersion: string
+    safeVersion: string
+  }
+  measuredGas: Record<string, { fixtureId?: string; test: string; gas: number; status: string }>
+  notes?: { source: string; pqReference?: string; disclaimer?: string }
+}
+
 export default function Evidence() {
   const { isDark } = useTheme()
   const [filter, setFilter] = useState<FixtureCategory | 'All'>('All')
+  const [runData, setRunData] = useState<RunData | null>(null)
+
+  useEffect(() => {
+    fetch('/run.json')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.measuredGas) setRunData(data)
+      })
+      .catch(() => null)
+  }, [])
   const stats = useMemo(() => {
     const total = EVIDENCE.length
     const pass = EVIDENCE.filter((r) => r.result === 'Pass').length
@@ -39,8 +62,52 @@ export default function Evidence() {
   return (
     <div className="mx-auto max-w-[1280px] px-5 pb-10 md:px-10">
       <PageHeader index="04" label="Evidence" parts={[{ t: 'Fixtures, not' }, { t: 'promises.', em: true }]}>
-        Each fixture is a transaction the guard must revert, or one it must let through. Every figure below is a placeholder until the real suite is wired in.
+        Each fixture is a transaction the guard must revert, or one it must let through. Verified on local Anvil chain 31337 and Foundry test suite; live gas benchmarks loaded from /run.json.
       </PageHeader>
+
+      {runData && (
+        <Reveal className="mb-6">
+          <div className="card p-6 border-2 border-ok/40 bg-ok/5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-edge pb-4">
+              <div className="flex items-center gap-2.5">
+                <Flame className="size-5 text-flame" aria-hidden />
+                <h3 className="font-display text-2xl font-extrabold uppercase">Measured On-Chain Gas</h3>
+                <span className="rounded-full bg-ok/15 px-2.5 py-0.5 font-mono text-[11px] font-bold uppercase text-ok">
+                  from /run.json
+                </span>
+              </div>
+              <div className="flex items-center gap-3 font-mono text-xs text-soft">
+                <span>{runData.environment.chain}</span>
+                <span>·</span>
+                <span>Safe {runData.environment.safeVersion}</span>
+                <span>·</span>
+                <span>Solc {runData.environment.solcVersion}</span>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {Object.entries(runData.measuredGas).map(([key, item]) => (
+                <div key={key} className="rounded-xl border border-line bg-paper/60 p-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-flame-deep">{item.fixtureId ?? key.slice(0, 3)}</span>
+                    <span className="rounded bg-ok/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ok">{item.status}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-lg font-extrabold tabular-nums">
+                    {item.gas.toLocaleString('en-US')} <span className="text-xs font-normal text-soft">gas</span>
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] text-soft" title={item.test}>
+                    {item.test.replace(/^test_/, '')}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {runData.notes?.disclaimer && (
+              <p className="mt-4 border-t border-line pt-3 font-mono text-xs text-soft">
+                {runData.notes.disclaimer}
+              </p>
+            )}
+          </div>
+        </Reveal>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-12">
         <Reveal className="lg:col-span-4">

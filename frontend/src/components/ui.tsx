@@ -1,6 +1,6 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
 import { animate, motion, useInView, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react'
-import { ArrowUpRight, Check, Copy, TriangleAlert } from 'lucide-react'
+import { ArrowUpRight, Check, Copy, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { Link } from 'react-router'
 import { SYNTHETIC_LABEL } from '@/lib/data'
 import type { StampKind } from '@/lib/types'
@@ -182,9 +182,9 @@ export function ArrowLink({ to, children, variant = 'primary', className = '' }:
 export function SyntheticBadge({ className = '' }: { className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border-2 border-dashed border-flame-deep bg-flame/15 px-3 py-1.5 font-mono text-[11px] font-bold uppercase leading-none tracking-wider text-flame-deep ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border-2 border-ok/80 bg-ok/10 px-3 py-1.5 font-mono text-[11px] font-bold uppercase leading-none tracking-wider text-ok ${className}`}
     >
-      <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+      <ShieldCheck className="size-3.5 shrink-0 text-ok" aria-hidden />
       {SYNTHETIC_LABEL}
     </span>
   )

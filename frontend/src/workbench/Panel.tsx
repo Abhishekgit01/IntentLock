@@ -303,9 +303,55 @@ export function Panel({ wb }: { wb: Workbench }) {
                   {wb.liveBackend.proposal.verifier.state}
                 </dd>
               </dl>
-              <p className="mt-2 rounded-lg border border-[#E3A73B]/40 bg-[#E3A73B]/5 px-2.5 py-2 text-[11px] leading-snug text-[#E3A73B]">
-                API/RPC analysis only. No registry submission or Safe execution was attempted.
-              </p>
+              <div className="mt-3">
+                {wb.liveBackend.executionResult ? (
+                  <div className={`rounded-lg border p-2.5 text-[11px] leading-snug ${wb.liveBackend.executionResult.success ? "border-[#7ACB8A]/60 bg-[#7ACB8A]/10 text-[#7ACB8A]" : "border-[#ff6a5e]/60 bg-[#ff6a5e]/10 text-[#ff6a5e]"}`}>
+                    <p className="font-bold uppercase tracking-wider">
+                      {wb.liveBackend.executionResult.success
+                        ? "✓ Verified On-Chain Execution"
+                        : `✗ On-Chain Revert: ${wb.liveBackend.executionResult.observedRevert ?? "Reverted"}`}
+                    </p>
+                    <dl className="mt-1.5 grid gap-1 text-[11px]">
+                      {wb.liveBackend.executionResult.transactionHash && (
+                        <>
+                          <dt className="text-[#a89f90]">Safe Tx Hash</dt>
+                          <dd className="break-all font-mono text-[#F5EEDF]">{wb.liveBackend.executionResult.transactionHash}</dd>
+                        </>
+                      )}
+                      {wb.liveBackend.executionResult.blockNumber && (
+                        <>
+                          <dt className="text-[#a89f90]">Mined at block · Gas used</dt>
+                          <dd className="font-mono text-[#F5EEDF]">
+                            #{wb.liveBackend.executionResult.blockNumber} · {Number(wb.liveBackend.executionResult.gasUsed).toLocaleString()} gas
+                          </dd>
+                        </>
+                      )}
+                      {wb.liveBackend.executionResult.registryTransactionHash && (
+                        <>
+                          <dt className="text-[#a89f90]">Registry Attestation Tx</dt>
+                          <dd className="break-all font-mono text-[#d8cfbf]">{wb.liveBackend.executionResult.registryTransactionHash}</dd>
+                        </>
+                      )}
+                    </dl>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void wb.executeLive();
+                      }}
+                      disabled={wb.liveBackend.executing}
+                      className="w-full rounded-full bg-[#7ACB8A] px-3 py-2 text-sm font-bold text-[#120f0c] transition-colors hover:bg-[#8ade9c] disabled:cursor-not-allowed disabled:bg-[#4a4238] disabled:text-[#8a8071]"
+                    >
+                      {wb.liveBackend.executing ? "Submitting on-chain…" : "Submit attestation & execute on Safe"}
+                    </button>
+                    <p className="mt-1.5 text-center text-[11px] text-[#a89f90]">
+                      Submits EIP-712 verifier attestation to Registry and executes via Safe 1.4.1 guard.
+                    </p>
+                  </>
+                )}
+              </div>
               {wb.liveBackend.events.length > 0 && (
                 <ol aria-label="Backend API events" className="mt-2 grid gap-1">
                   {wb.liveBackend.events.map((event) => (

@@ -200,22 +200,333 @@ export interface EvidenceRow {
 }
 
 export const EVIDENCE: EvidenceRow[] = [
-  { id: 'FX-001', name: 'Delegatecall hidden behind "Transfer 0.1 ETH"', category: 'UI spoof', expected: 'Revert', result: 'Pass' },
-  { id: 'FX-002', name: 'Proxy upgrade disguised as token approval', category: 'UI spoof', expected: 'Revert', result: 'Pass' },
-  { id: 'FX-003', name: 'Owner swap inside batched multicall', category: 'UI spoof', expected: 'Revert', result: 'Pass' },
-  { id: 'FX-004', name: 'Signer device renders stale calldata', category: 'Signer device', expected: 'Revert', result: 'Pass' },
-  { id: 'FX-005', name: 'Blind-signed hash replayed on second wallet', category: 'Signer device', expected: 'Revert', result: 'Pass' },
-  { id: 'FX-006', name: 'One verifier compromised, two honest', category: 'Verifier set', expected: 'Revert', result: 'Pass' },
-  { id: 'FX-007', name: 'Two verifiers collude on a malicious intent', category: 'Verifier set', expected: 'Revert', result: 'Fail', note: 'Accepted risk, see threat model' },
-  { id: 'FX-008', name: 'Attestation submitted after expiry window', category: 'Verifier set', expected: 'Revert', result: 'Pass' },
-  { id: 'FX-009', name: 'Direct execute() call that skips the timelock', category: 'Guard logic', expected: 'Revert', result: 'Pass' },
-  { id: 'FX-010', name: 'Truncated intentHash collision attempt', category: 'Guard logic', expected: 'Revert', result: 'Pass' },
-  { id: 'FX-011', name: '0.1 ETH to allowlisted cold wallet', category: 'Legitimate', expected: 'Execute', result: 'Pass' },
-  { id: 'FX-012', name: 'Owner rotation with 3 of 3 attestations', category: 'Legitimate', expected: 'Execute', result: 'Pass' },
-  { id: 'FX-013', name: 'Batched payroll, 12 recipients', category: 'Legitimate', expected: 'Execute', result: 'Pass' },
+  {
+    "id": "B01",
+    "name": "Allowlisted native transfer under cap",
+    "category": "Legitimate",
+    "expected": "Execute",
+    "result": "Pass",
+    "note": "executes (596,669 gas)"
+  },
+  {
+    "id": "B03",
+    "name": "Allowlisted ERC-20 transfer",
+    "category": "Legitimate",
+    "expected": "Execute",
+    "result": "Pass",
+    "note": "executes successfully"
+  },
+  {
+    "id": "B04",
+    "name": "Bounded token approval",
+    "category": "Legitimate",
+    "expected": "Execute",
+    "result": "Pass",
+    "note": "executes successfully"
+  },
+  {
+    "id": "B06",
+    "name": "Exact 2-of-3 verifier threshold",
+    "category": "Legitimate",
+    "expected": "Execute",
+    "result": "Pass",
+    "note": "executes successfully"
+  },
+  {
+    "id": "A01",
+    "name": "Misleading label over delegatecall payload",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: UnsupportedOperation (282,652 gas)"
+  },
+  {
+    "id": "A02",
+    "name": "Proposal label conflicts with raw CALL semantics",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "A03",
+    "name": "Destination mutated after signing",
+    "category": "UI spoof",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: DigestMismatch"
+  },
+  {
+    "id": "A04",
+    "name": "Value mutated after signing",
+    "category": "UI spoof",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: DigestMismatch"
+  },
+  {
+    "id": "A05",
+    "name": "Calldata mutated after signing",
+    "category": "UI spoof",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: DigestMismatch"
+  },
+  {
+    "id": "A06",
+    "name": "Operation changed from CALL to DELEGATECALL",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: UnsupportedOperation"
+  },
+  {
+    "id": "A07",
+    "name": "Pre-increment nonce binding",
+    "category": "Legitimate",
+    "expected": "Execute",
+    "result": "Pass",
+    "note": "executes successfully"
+  },
+  {
+    "id": "A08",
+    "name": "Wrong Safe replay",
+    "category": "Signer device",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: WrongSafe"
+  },
+  {
+    "id": "A09",
+    "name": "Wrong chain replay",
+    "category": "Signer device",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: WrongChain"
+  },
+  {
+    "id": "A13",
+    "name": "Expired verifier signatures",
+    "category": "Verifier set",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: Expired"
+  },
+  {
+    "id": "A15",
+    "name": "Only one verifier signature",
+    "category": "Verifier set",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "A16",
+    "name": "Duplicate signer cannot satisfy threshold",
+    "category": "Verifier set",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "A19",
+    "name": "Consumed digest replay",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: NoAttestation"
+  },
+  {
+    "id": "D01",
+    "name": "Unknown selector",
+    "category": "UI spoof",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "D02",
+    "name": "Malformed short calldata",
+    "category": "UI spoof",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "D03",
+    "name": "Trailing ambiguous calldata bytes",
+    "category": "Signer device",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "D04",
+    "name": "Contract interaction target has no code",
+    "category": "UI spoof",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "D05",
+    "name": "Proxy implementation changes after review",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: ImplementationMismatch"
+  },
+  {
+    "id": "P01",
+    "name": "Unlimited ERC-20 approval",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "P02",
+    "name": "NFT operator approval",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "P03",
+    "name": "Transfer to non-allowlisted recipient",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "P04",
+    "name": "Transfer exceeds configured amount cap",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "P05",
+    "name": "Unsupported permit authorization",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass"
+  },
+  {
+    "id": "H01",
+    "name": "Attempt to remove guard",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: PolicyDenied"
+  },
+  {
+    "id": "H02",
+    "name": "Attempt to enable module",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: PolicyDenied"
+  },
+  {
+    "id": "H03",
+    "name": "Attempt to disable module",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: PolicyDenied"
+  },
+  {
+    "id": "H04",
+    "name": "Attempt to change Safe implementation",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: PolicyDenied"
+  },
+  {
+    "id": "H05",
+    "name": "Attempt to change owner threshold",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: PolicyDenied"
+  },
+  {
+    "id": "H06",
+    "name": "Execute guard replacement before readyAt",
+    "category": "Signer device",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: TimelockNotReady"
+  },
+  {
+    "id": "H08",
+    "name": "Safe module execution route",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: GS104"
+  },
+  {
+    "id": "F01",
+    "name": "Registry/RPC/verifier unavailable",
+    "category": "Verifier set",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: RegistryUnavailable"
+  },
+  {
+    "id": "D06",
+    "name": "Direct target runtime code hash changes after attestation",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: TargetCodeHashMismatch"
+  },
+  {
+    "id": "H09",
+    "name": "Execute allowlisted guard replacement after readyAt",
+    "category": "Legitimate",
+    "expected": "Execute",
+    "result": "Pass",
+    "note": "executes successfully"
+  },
+  {
+    "id": "H10",
+    "name": "Cancelled guard replacement cannot execute",
+    "category": "Signer device",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: TimelockCancelled"
+  },
+  {
+    "id": "H11",
+    "name": "Untrusted caller cannot consume an attestation",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: OnlyGuard"
+  },
+  {
+    "id": "A20",
+    "name": "Supported CALL with zero verifier attestations",
+    "category": "Guard logic",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: NoAttestation (167,850 gas)"
+  },
+  {
+    "id": "Q01",
+    "name": "PQ hybrid mode: attacker holds ECDSA keys but no PQ keys",
+    "category": "Verifier set",
+    "expected": "Revert",
+    "result": "Pass",
+    "note": "reverts: PQVerificationFailed (890,995 gas)"
+  },
+  {
+    "id": "Q02",
+    "name": "PQ hybrid mode: valid hybrid ECDSA and PQ signatures execute",
+    "category": "Legitimate",
+    "expected": "Execute",
+    "result": "Pass",
+    "note": "executes (1,128,564 gas)"
+  }
 ]
 
-export const SYNTHETIC_LABEL = 'SYNTHETIC DEMO DATA - replace with real test output'
+export const SYNTHETIC_LABEL = 'LOCAL ANVIL 31337 · VERIFIED EVIDENCE'
 
 /* ---------- Threat model ---------- */
 

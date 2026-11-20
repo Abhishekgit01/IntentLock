@@ -11,6 +11,7 @@ import {
 } from "./scenes";
 import {
   createLiveProposal,
+  executeLiveProposal,
   getBackendConfig,
   getBackendHealth,
   getChainContext,
@@ -19,6 +20,7 @@ import {
   type BackendConfig,
   type BackendHealth,
   type ChainContext,
+  type LiveExecutionResult,
   type LiveProposal,
 } from "./backend";
 
@@ -63,6 +65,8 @@ export interface Workbench {
     proposal: LiveProposal | null;
     events: ApiEvent[];
     submitting: boolean;
+    executing: boolean;
+    executionResult: LiveExecutionResult | null;
     error: string | null;
     streamConnected: boolean;
   };
@@ -77,6 +81,7 @@ export interface Workbench {
   tourBack: () => void;
   endTour: () => void;
   analyzeLive: () => Promise<void>;
+  executeLive: () => Promise<void>;
 }
 
 export function useWorkbench(): Workbench {
@@ -98,6 +103,8 @@ export function useWorkbench(): Workbench {
     proposal: null,
     events: [],
     submitting: false,
+    executing: false,
+    executionResult: null,
     error: null,
     streamConnected: false,
   });
@@ -206,6 +213,31 @@ export function useWorkbench(): Workbench {
     }
   }, [mode, ref]);
 
+  const executeLive = useCallback(async () => {
+    if (!liveBackend.proposal) return;
+    setLiveBackend((current) => ({
+      ...current,
+      executing: true,
+      error: null,
+    }));
+    try {
+      const result = await executeLiveProposal(liveBackend.proposal.proposalId);
+      setLiveBackend((current) => ({
+        ...current,
+        executing: false,
+        executionResult: result,
+      }));
+      const [config, context] = await Promise.all([getBackendConfig(), getChainContext()]);
+      setLiveBackend((current) => ({ ...current, config, context }));
+    } catch (err) {
+      setLiveBackend((current) => ({
+        ...current,
+        executing: false,
+        error: err instanceof Error ? err.message : "Execution failed.",
+      }));
+    }
+  }, [liveBackend.proposal]);
+
   const setMode = useCallback(
     (m: Mode) => {
       // a break-it run only makes sense with the guard on; toggling off returns to the attack scenario
@@ -291,5 +323,6 @@ export function useWorkbench(): Workbench {
     tourBack,
     endTour,
     analyzeLive,
+    executeLive,
   };
 }

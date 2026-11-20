@@ -167,7 +167,16 @@ export function subscribeToProposal(
 ) {
   const url = `${API_ROOT}${proposal.eventsUrl}`;
   const stream = new EventSource(url);
-  const names = ["proposal.created", "decode.started", "decode.completed", "policy.evaluated"];
+  const names = [
+    "proposal.created",
+    "decode.started",
+    "decode.completed",
+    "policy.evaluated",
+    "attestation.submitted_onchain",
+    "execution.submitted",
+    "execution.succeeded",
+    "execution.failed",
+  ];
   for (const name of names) {
     stream.addEventListener(name, (message) => {
       try {
@@ -179,4 +188,21 @@ export function subscribeToProposal(
   }
   stream.onerror = onError;
   return () => stream.close();
+}
+
+export interface LiveExecutionResult {
+  status: string;
+  success: boolean;
+  transactionHash?: string;
+  blockNumber?: string;
+  gasUsed?: string;
+  observedRevert?: string;
+  error?: string;
+  registryTransactionHash?: string;
+}
+
+export async function executeLiveProposal(proposalId: string): Promise<LiveExecutionResult> {
+  return api<LiveExecutionResult>(`/v1/proposals/${proposalId}/execute`, {
+    method: "POST",
+  });
 }

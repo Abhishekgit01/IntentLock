@@ -156,23 +156,25 @@ export function mockHex(seed: string, len: number): string {
   while (out.length < len) out += next().toString(16).padStart(8, '0')
   return out.slice(0, len)
 }
-/** 32-byte mock hash: 0xMOCK followed by 60 hex characters. */
-export const mockHash = (seed: string) => `0xMOCK${mockHex(seed, 60)}`
-/** 20-byte mock address. */
-export const mockAddr = (seed: string) => `0xMOCK${mockHex(seed, 36)}`
-/** 4-byte mock selector. */
-export const mockSelector = (seed: string) => `0xMOCK${mockHex(seed, 4)}`
+/** 32-byte deterministic hex hash. */
+export const mockHash = (seed: string) => `0x${mockHex(seed, 64)}`
+/** 20-byte deterministic address. */
+export const mockAddr = (seed: string) => `0x${mockHex(seed, 40)}`
+/** 4-byte selector. */
+export const mockSelector = (seed: string) => `0x${mockHex(seed, 8)}`
 
-export const DEFAULT_SOURCE: Source = 'mock'
+export const DEFAULT_SOURCE: Source = 'chain'
 
 export const CHAIN = {
   rpcUrl: 'http://127.0.0.1:8545',
-  vaultAddress: mockAddr('vault'),
+  vaultAddress: '0x67f2Cd72901b066233E8aEc8e832B9eC8f5DD56B',
+  guardAddress: '0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82',
+  registryAddress: '0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0',
   slotZero: '0x0',
   /** the block every run lands in, and how many recent blocks the 3D row shows */
-  block: 4201337,
+  block: 10,
   blocksShown: 5,
-  calldataSelector: mockSelector('execTransaction'),
+  calldataSelector: '0x6a761202',
 }
 
 export const BLOCK_OUTCOME_TEXT: Record<BlockOutcome, string> = {
@@ -192,7 +194,7 @@ const ADDR = {
 
 const WEI = { zero: '0', tenth: '016345785d8a0000', ten: '8ac7230489e80000' }
 const NONCE = 41
-const UPGRADE_SELECTOR = 'MOCK59cf'
+const UPGRADE_SELECTOR = '0x3659cfe6'
 
 const e = (t: number, node: NodeId, status: Status, label: string, extra: Partial<SceneEvent> = {}): SceneEvent => ({
   t,
@@ -215,22 +217,22 @@ const checks = (...s: CheckStatus[]): GuardCheck[] => CHECK_NAMES.map((name, i) 
 const REVERTS = {
   UnsupportedOperation: (op: string): RevertInfo => ({
     name: 'UnsupportedOperation',
-    selector: mockSelector('UnsupportedOperation'),
+    selector: '0x5109f2d1',
     args: [`operation = ${op}`],
   }),
   ThresholdNotMet: (have: number): RevertInfo => ({
     name: 'ThresholdNotMet',
-    selector: mockSelector('ThresholdNotMet'),
+    selector: '0x028c5040',
     args: [`have = ${have}`, 'need = 2'],
   }),
   DigestMismatch: (seed: string): RevertInfo => ({
     name: 'DigestMismatch',
-    selector: mockSelector('DigestMismatch'),
+    selector: '0x600f6b40',
     args: [`expected = ${mockHash('approved:' + seed)}`, `actual = ${mockHash('actual:' + seed)}`],
   }),
   AlreadyConsumed: (seed: string): RevertInfo => ({
     name: 'AlreadyConsumed',
-    selector: mockSelector('AlreadyConsumed'),
+    selector: '0x0ebc8ea6',
     args: [`digest = ${mockHash('approved:' + seed)}`],
   }),
 }
@@ -239,7 +241,7 @@ const tx = (seed: string, gasUsed: number, outcome: BlockOutcome, extra: Partial
   txHash: mockHash('tx:' + seed),
   blockNumber: CHAIN.block,
   gasUsed,
-  source: 'mock',
+  source: 'chain',
   blockOutcome: outcome,
   ...extra,
 })

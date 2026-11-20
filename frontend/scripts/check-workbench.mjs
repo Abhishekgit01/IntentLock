@@ -4,7 +4,11 @@ import { pathToFileURL } from 'node:url'
 import { execFileSync } from 'node:child_process'
 
 const src = readFileSync('src/workbench/scenes.ts', 'utf8')
-execFileSync('node', ['--experimental-strip-types', '--no-warnings', '-e', `
+const isBun = Boolean(process.versions?.bun)
+const runner = isBun ? 'bun' : 'node'
+const runnerArgs = isBun ? ['-e'] : ['--experimental-strip-types', '--no-warnings', '-e']
+
+execFileSync(runner, [...runnerArgs, `
 import * as m from ${JSON.stringify(pathToFileURL('src/workbench/scenes.ts').href)};
 const words = (s) => s.trim().split(/\\s+/).length;
 const bad = [];
@@ -26,6 +30,9 @@ const landing = (events, where) => {
     if (!ev.txHash.startsWith('0xMOCK')) bad.push(where + ' txHash does not start with 0xMOCK')
     if (ev.revert && !ev.revert.selector.startsWith('0xMOCK')) bad.push(where + ' selector does not start with 0xMOCK')
     for (const a of ev.revert?.args ?? []) { const m = a.match(/0x[0-9A-Za-z]{20,}/g) ?? []; for (const h of m) if (!h.startsWith('0xMOCK')) bad.push(where + ' hash in args lacks 0xMOCK: ' + h) }
+  } else if (ev.source === 'chain') {
+    if (!/^0x[0-9a-fA-F]{64}$/.test(ev.txHash)) bad.push(where + ' txHash is not a valid 32-byte hex: ' + ev.txHash)
+    if (ev.revert && !/^0x[0-9a-fA-F]{8}$/.test(ev.revert.selector)) bad.push(where + ' selector is not a valid 4-byte selector: ' + ev.revert.selector)
   }
   const order = ['pass','fail','skipped']; const cs = ev.guardChecks.map((c) => c.status)
   const firstFail = cs.indexOf('fail'); if (firstFail >= 0 && cs.slice(firstFail + 1).some((x) => x !== 'skipped')) bad.push(where + ' checks continue after the first failure')
@@ -35,7 +42,7 @@ const landing = (events, where) => {
 }
 for (const sc of m.SCENARIOS) { landing(sc.guarded, sc.id + '/guarded'); landing(sc.unguarded, sc.id + '/unguarded') }
 for (const b of m.BREAKS) { landing(b.events, b.id); if (!b.unguarded) bad.push(b.id + ' has no unguarded comparison'); else landing(b.unguarded, b.id + '/unguarded') }
-for (const f of [m.CHAIN.vaultAddress, m.CHAIN.calldataSelector]) if (!f.startsWith('0xMOCK')) bad.push('CHAIN value lacks 0xMOCK: ' + f)
+for (const f of [m.CHAIN.vaultAddress, m.CHAIN.calldataSelector]) if (!/^0x[0-9a-fA-F]+$/.test(f)) bad.push('CHAIN value not valid hex: ' + f)
 // ---- acts: story (Act 1 + 3), fixtures (Act 3), roadmap (Act 4) ----
 {
   const story = await import(${JSON.stringify(pathToFileURL('src/workbench/story.ts').href)});

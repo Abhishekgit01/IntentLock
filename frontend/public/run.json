@@ -1,0 +1,61 @@
+{
+  "recordedAt": "2026-11-20T18:12:37Z",
+  "environment": {
+    "chain": "local Anvil / Foundry",
+    "chainId": 31337,
+    "forgeVersion": "1.10.0 (commit 083e22994195d6a7e3ad3104d0b57f478c9b9062)",
+    "solcVersion": "0.8.28",
+    "safeVersion": "1.4.1 (tag v1.4.1, commit bf943f80fec5ac647159d26161446ac5d716a294)",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    }
+  },
+  "measuredGas": {
+    "B01_AllowlistedNativeTransferExecutes": {
+      "fixtureId": "B01",
+      "test": "test_B01_AllowlistedNativeTransferExecutes",
+      "gas": 596669,
+      "status": "PASS"
+    },
+    "A01_DelegatecallAlwaysReverts": {
+      "fixtureId": "A01",
+      "test": "test_A01_DelegatecallAlwaysReverts",
+      "gas": 282652,
+      "status": "PASS"
+    },
+    "A20_NoAttestationFailsClosed": {
+      "fixtureId": "A20",
+      "test": "test_A20_NoAttestationFailsClosed",
+      "gas": 167850,
+      "status": "PASS"
+    },
+    "Q01_PQModeAttackerHasECDSAButNoPQ": {
+      "fixtureId": "Q01",
+      "test": "test_Q01_PQModeAttackerHasECDSAButNoPQ",
+      "gas": 890995,
+      "status": "PASS"
+    },
+    "Q02_PQModeValidHybridExecutes": {
+      "fixtureId": "Q02",
+      "test": "test_Q02_PQModeValidHybridExecutes",
+      "gas": 1128564,
+      "status": "PASS"
+    },
+    "PQMode_CorruptedPQSignatureFailsClosed": {
+      "test": "test_PQMode_CorruptedPQSignatureFailsClosed",
+      "gas": 621434,
+      "status": "PASS"
+    },
+    "DefaultMode_PureECDSAOperatesNormally": {
+      "test": "test_DefaultMode_PureECDSAOperatesNormally",
+      "gas": 532186,
+      "status": "PASS"
+    }
+  },
+  "notes": {
+    "source": "Actual gas measured on pinned Foundry 1.10.0 and Anvil test environment. Never estimated or blog-sourced.",
+    "pqReference": "ML-DSA-44 (NIST FIPS 204) parameter sizing based on open-source ZKNoxHQ/ETHDILITHIUM (MIT License, commit f9f4fe1d84e68304b425e054c273c276fe44ba11, dated 2026-09-16). Marked experimental, unaudited.",
+    "disclaimer": "Safe owner signatures remain ECDSA. IntentLock verifier hybrid PQ mode is a simulated adversary resistance test against compromised ECDSA verifiers, not a full quantum-safety claim."
+  }
+}

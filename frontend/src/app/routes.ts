@@ -7,6 +7,7 @@ import Lifecycle from '@/pages/Lifecycle'
 import Evidence from '@/pages/Evidence'
 import Threats from '@/pages/Threats'
 import NotFound from '@/pages/NotFound'
+import Onboard from '@/onboard/Onboard'
 
 // The workbench is a full-screen page outside the shared layout, loaded on demand (three.js is large).
 const workbench = { HydrateFallback: () => null, lazy: async () => ({ Component: (await import('@/workbench/WorkbenchShell')).default }) }
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: 'lifecycle', Component: Lifecycle },
       { path: 'evidence', Component: Evidence },
       { path: 'threats', Component: Threats },
+      { path: 'onboard', Component: Onboard },
       { path: '*', Component: NotFound },
     ],
   },

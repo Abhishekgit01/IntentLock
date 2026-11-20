@@ -18,3 +18,9 @@ The visual workbench keeps its scripted story labeled as synthetic. Its **Live b
 4. Start the frontend with `cd frontend && pnpm dev`. Vite proxies `/api/*` to `http://127.0.0.1:8787` by default. For a deployed backend, set `VITE_INTENTLOCK_API_URL` to its origin and configure its `ALLOWED_ORIGINS` explicitly.
 
 The connected endpoint reports actual chain ID, block, Safe nonce, balance, code hash, guard, and module count. Submitting a scenario creates only an in-memory backend proposal. It does not collect verifier signatures, submit to the registry, or execute the Safe transaction.
+
+## Policy onboarding
+
+Visit `/onboard` for a seven-step policy wizard. The sample policy and preview adapter work without a backend and display `PREVIEW`; the persistent `SYNTHETIC LOCAL CHAIN` badge describes the wizard environment. When the API is reachable, policy compile/lint use the deterministic backend compiler and simulation calls raw-only `POST /decode`. The dry-run endpoint never signs. The preview conformance result is explicitly synthetic; run `npm run intentlock -- conformance --endpoint ...` to query a verifier endpoint with the catalog decision templates. The wizard keeps state in memory only and does not use local storage.
+
+Policy input and hash semantics are defined in [`../docs/policy.schema.json`](../docs/policy.schema.json) and [D-030](../docs/DECISIONS.md#d-030-policy-authoring-file-and-canonical-compiler-output). Verifier downloads contain public configuration only, never private keys.
