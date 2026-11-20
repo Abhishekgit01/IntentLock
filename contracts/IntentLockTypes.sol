@@ -22,4 +22,5 @@ struct AttestationRecord {
     IntentAttestation attestation;
     bool exists;
     bool consumed;
+    bool pqVerified;
 }

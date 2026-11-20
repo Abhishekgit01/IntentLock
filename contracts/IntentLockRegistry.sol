@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {IntentAttestation, AttestationRecord} from "./IntentLockTypes.sol";
+import {IPQVerifier} from "./IPQVerifier.sol";
 import {
     NoAttestation,
     WrongSafe,
@@ -15,7 +16,10 @@ import {
     CompetingProposal,
     Unauthorized,
     InvalidSignature,
-    InvalidVerifierSet
+    InvalidVerifierSet,
+    PQVerificationFailed,
+    PQKeyNotConfigured,
+    PQModeNotEnabled
 } from "./IntentLockErrors.sol";
 
 /**
@@ -47,6 +51,8 @@ contract IntentLockRegistry {
         uint256 signerCount
     );
     event AttestationConsumed(address indexed safe, uint256 indexed safeNonce, bytes32 indexed safeTxHash);
+    event PQModeToggled(bool enabled);
+    event VerifierPQKeyConfigured(address indexed verifier, bytes pqPublicKey, address verifierContract);
 
     address public owner;
     address public guard;
@@ -59,6 +65,13 @@ contract IntentLockRegistry {
 
     address[] public activeVerifiers;
     mapping(address => bool) public isVerifier;
+
+    // Optional post-quantum hybrid attestation mode state
+    // Owner Safe signatures remain ECDSA. This applies solely to IntentLock verifiers.
+    // This is a simulated adversary test, not a quantum-safety claim.
+    bool public pqModeEnabled;
+    mapping(address => bytes) public verifierPQPublicKeys;
+    mapping(address => address) public verifierPQVerifier;
 
     uint256 public maxAttestationLifetime;
     uint256 public maxClockSkew;
@@ -164,6 +177,25 @@ contract IntentLockRegistry {
         _setVerifierSet(verifiers, threshold, verifierSetId);
     }
 
+    function setPQMode(bool enabled) external onlyOwner {
+        pqModeEnabled = enabled;
+        emit PQModeToggled(enabled);
+    }
+
+    function setVerifierPQKey(address verifier, bytes calldata pqPublicKey, address pqVerifierContract)
+        external
+        onlyOwner
+    {
+        if (!isVerifier[verifier]) revert Unauthorized();
+        verifierPQPublicKeys[verifier] = pqPublicKey;
+        verifierPQVerifier[verifier] = pqVerifierContract;
+        emit VerifierPQKeyConfigured(verifier, pqPublicKey, pqVerifierContract);
+    }
+
+    function isPQVerified(address safe, uint256 safeNonce) external view returns (bool) {
+        return _records[safe][safeNonce].pqVerified;
+    }
+
     function _setVerifierSet(address[] memory verifiers, uint256 threshold, bytes32 verifierSetId) internal {
         if (verifiers.length == 0 || threshold == 0 || threshold > verifiers.length) {
             revert InvalidVerifierSet();
@@ -194,6 +226,23 @@ contract IntentLockRegistry {
     }
 
     function submitAttestation(IntentAttestation memory attestation, bytes[] calldata signatures) external {
+        bytes[] memory emptyPQ = new bytes[](0);
+        _submitAttestation(attestation, signatures, emptyPQ);
+    }
+
+    function submitAttestationHybrid(
+        IntentAttestation memory attestation,
+        bytes[] calldata signatures,
+        bytes[] calldata pqSignatures
+    ) external {
+        _submitAttestation(attestation, signatures, pqSignatures);
+    }
+
+    function _submitAttestation(
+        IntentAttestation memory attestation,
+        bytes[] memory signatures,
+        bytes[] memory pqSignatures
+    ) internal {
         if (block.chainid != chainId) revert WrongChain();
         if (attestation.safe == address(0)) revert WrongSafe();
         if (attestation.intentSchemaVersion != 1) revert PolicyDenied();
@@ -234,19 +283,41 @@ contract IntentLockRegistry {
                     break;
                 }
             }
-            if (!alreadySeen) {
-                seenSigners[validSignersCount] = signer;
-                validSignersCount++;
+            if (alreadySeen) {
+                continue;
             }
+
+            // In PQ mode a verifier counts toward threshold only if BOTH ECDSA and PQ signatures verify
+            if (pqModeEnabled) {
+                if (i >= pqSignatures.length || pqSignatures[i].length == 0) {
+                    continue;
+                }
+                bytes memory pk = verifierPQPublicKeys[signer];
+                address verifierContract = verifierPQVerifier[signer];
+                if (pk.length == 0 || verifierContract == address(0)) {
+                    continue;
+                }
+                bool pqValid = IPQVerifier(verifierContract).verify(pk, digest, pqSignatures[i]);
+                if (!pqValid) {
+                    continue;
+                }
+            }
+
+            seenSigners[validSignersCount] = signer;
+            validSignersCount++;
         }
 
         if (validSignersCount < verifierThreshold) {
+            if (pqModeEnabled) {
+                revert PQVerificationFailed();
+            }
             revert ThresholdNotMet();
         }
 
         record.attestation = attestation;
         record.exists = true;
         record.consumed = false;
+        record.pqVerified = pqModeEnabled;
 
         emit AttestationAccepted(
             attestation.safe, attestation.safeTxHash, attestation.intentHash, attestation.proposalId, validSignersCount
@@ -274,15 +345,15 @@ contract IntentLockRegistry {
         emit AttestationConsumed(safe, safeNonce, expectedSafeTxHash);
     }
 
-    function recoverSigner(bytes32 digest, bytes calldata signature) public pure returns (address) {
+    function recoverSigner(bytes32 digest, bytes memory signature) public pure returns (address) {
         if (signature.length != 65) revert InvalidSignature();
         bytes32 r;
         bytes32 s;
         uint8 v;
         assembly {
-            r := calldataload(signature.offset)
-            s := calldataload(add(signature.offset, 32))
-            v := byte(0, calldataload(add(signature.offset, 64)))
+            r := mload(add(signature, 32))
+            s := mload(add(signature, 64))
+            v := byte(0, mload(add(signature, 96)))
         }
         if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
             revert InvalidSignature();

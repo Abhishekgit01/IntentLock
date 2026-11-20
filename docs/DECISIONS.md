@@ -35,6 +35,8 @@ The team has 3+ people and Solidity capability varies. Assign named owners at ki
 | D-027 | Team assignments | Role-only; named responsibilities | **3+ people, Solidity capability varies — assign capable author and second human reviewer by name** | Project lead | Kickoff / before contract code |
 | D-028 | Visual palette / Figma direction | Define here; owner-managed Figma | **Out of scope for this repo spec — project owner decides and documents in Figma** | Project owner | No code-spec deadline |
 | D-029 | Canonical intent and policy hash encoding | Canonical JSON hash; EIP-712 typed intent; ad hoc ABI packing | **EIP-712 `IntentV1` / `IntentAction` with the `IntentLockIntent` domain; policy hash commits to sorted native/ERC-20 recipient sets, native/ERC-20 caps, and sorted token address/runtime-code-hash pairs — locked in PROTOCOL.md** | Protocol + contracts leads | Share known-answer vectors before attestation signatures are used |
+| D-030 | Policy authoring file and canonical compiler output | Hash JSON text; accept arbitrary UI rules; compile the locked `PolicyV1` fields | **Strict `intentlock.policy.v1` JSON with `schemaVersion: 1`, `native.maxTransferWei`, `native.allowedRecipients`, `erc20.maxTransferBaseUnits`, `erc20.allowedRecipients`, and `erc20.tokens[{address,runtimeCodeHash}]`. Amounts are decimal strings; addresses and hashes normalize lowercase; address lists and token/hash pairs sort numerically. Compiler emits ABI bytes for `(POLICY_TYPEHASH,uint32(1),maxNativeTransferWei,nativeRecipientSetHash,erc20TokenMapHash,erc20RecipientSetHash,maxErc20TransferBaseUnits)` and `keccak256(bytes)` as `policyHash`, exactly matching D-029 and the registry. UI/source-quote metadata is not in the hashed file or decision path. Empty allowlists and zero caps are valid deny-all settings.** | Protocol + backend leads | Before onboarding compiler/API; add cross-language known-answer vector before enabling registry policy updates |
+| D-031 | Post-quantum hybrid attestation mode | None; mandatory PQ; optional hybrid PQ | **Optional hybrid PQ mode in registry — locked for Phase 5 stretch**. Default mode remains pure ECDSA; in PQ mode, each threshold verifier must verify BOTH ECDSA and open-source ML-DSA-44 PQ signatures over the exact typed attestation digest. Safe owner signatures remain ECDSA; this is an adversarial test, not a quantum-safety claim. | Contracts lead | Phase 5 implementation |
 
 ## Safe source verification
 
@@ -49,3 +51,18 @@ These conclusions are version-specific. If D-002 changes, reopen D-003–D-016 a
 ## Change procedure
 
 For each decision change, add the reason, affected interfaces/contracts/fixtures/docs, migration impact, and reviewer. Do not silently change an enum, hash field, Safe version, or policy default. Update [PROTOCOL.md](PROTOCOL.md), [CONTRACTS.md](CONTRACTS.md), [DECODER_AND_POLICY.md](DECODER_AND_POLICY.md), and [`fixtures/catalog.json`](fixtures/catalog.json) together where relevant.
+
+### Change records
+
+#### Change 2026-11-20: D-031 Optional Hybrid Post-Quantum Attestation Mode (Phase 5 Stretch)
+- **Reason**: Implement a post-quantum hybrid threshold mode as a defense against compromised ECDSA verifiers while preserving complete backward compatibility with the default protocol mode and Safe 1.4.1.
+- **Affected interfaces/contracts**:
+  - `contracts/IntentLockRegistry.sol`: adds `pqModeEnabled`, `setPQMode(bool)`, `setVerifierPQKey(address,bytes,address)`, `submitAttestationHybrid(...)`, and `isPQVerified(address,uint256)`.
+  - `contracts/IntentLockGuard.sol`: enforces `isPQVerified` whenever registry has `pqModeEnabled == true`.
+  - `contracts/IPQVerifier.sol` & `contracts/MockMLDSAVerifier.sol`: pluggable interface and parameter-accurate ML-DSA-44 test verifier based on `ZKNoxHQ/ETHDILITHIUM`.
+  - `contracts/IntentLockErrors.sol`: adds `PQVerificationFailed`, `PQKeyNotConfigured`, `PQModeNotEnabled`.
+- **Affected fixtures**: Adds `Q01` (attacker possessing all ECDSA keys but no PQ keys fails closed) and `Q02` (valid hybrid ECDSA + ML-DSA-44 PQ run executes).
+- **Affected docs**: `docs/THIRD_PARTY.md` (adds `ZKNoxHQ/ETHDILITHIUM` attribution and "experimental, unaudited" notice), `docs/CLAIMS_REGISTER.md` (adds C-020 through C-022), `docs/fixtures/catalog.json` (adds Q01 and Q02), and `run.json` (measured gas).
+- **EIP-712 / Enum impact**: ZERO changes to `IntentAttestation` EIP-712 struct fields or policy decision enum. PQ signatures verify over the exact typed digest and are stored separately.
+- **Quantum-safety boundary**: Safe owner signatures remain ECDSA. This is an adversarial simulation test against rogue verifiers, not a quantum-safety claim.
+- **Reviewer**: Contracts lead + human reviewer.

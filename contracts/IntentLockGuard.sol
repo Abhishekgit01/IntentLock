@@ -17,7 +17,8 @@ import {
     PolicyDenied,
     UnsupportedOperation,
     TargetCodeHashMismatch,
-    ImplementationMismatch
+    ImplementationMismatch,
+    PQVerificationFailed
 } from "./IntentLockErrors.sol";
 
 interface ISafe {
@@ -115,6 +116,12 @@ contract IntentLockGuard is BaseGuard {
         }
         if (consumed) {
             revert AlreadyConsumed();
+        }
+
+        // Hybrid PQ mode enforcement: when registry has PQ mode enabled, attestation must be PQ-verified
+        // Owner Safe signatures remain ECDSA. This is a simulated adversary test, not a quantum-safety claim.
+        if (registry.pqModeEnabled() && !registry.isPQVerified(configuredSafe, safeNonce)) {
+            revert PQVerificationFailed();
         }
 
         // Validate attestation bindings
