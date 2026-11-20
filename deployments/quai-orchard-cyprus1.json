@@ -121,5 +121,5 @@
     "safeNonce": 1,
     "guardInstalledEventObserved": true
   },
-  "explorerVerification": "not_checked"
+  "explorerVerification": "submitted_pending_confirmation"
 }
