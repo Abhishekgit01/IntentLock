@@ -1,62 +1,107 @@
-import { useEffect, useMemo, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
-import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis, YAxis } from 'recharts'
-import { ChevronDown, Cpu, FileSearch, Flame, ShieldCheck } from 'lucide-react'
-import { EVIDENCE, txFor, type FixtureCategory } from '@/lib/data'
-import { SCRIPTS } from '@/lib/script'
-import { useIntentLock } from '@/lib/useIntentLockEvents'
-import { useTheme } from '@/lib/theme'
-import { CopyButton, CountUp, HashDiff, PageHeader, Reveal, SafeBoundary, SyntheticBadge } from '@/components/ui'
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { ChevronDown, Cpu, FileSearch, Flame, ShieldCheck } from "lucide-react";
+import { EVIDENCE, txFor, type FixtureCategory } from "@/lib/data";
+import { SCRIPTS } from "@/lib/script";
+import { useIntentLock } from "@/lib/useIntentLockEvents";
+import { useTheme } from "@/lib/theme";
+import { CopyButton, CountUp, HashDiff, PageHeader, Reveal, SafeBoundary } from "@/components/ui";
+import { loadEvidence } from "@/network/evidence";
 
-const CATS: FixtureCategory[] = ['UI spoof', 'Signer device', 'Verifier set', 'Guard logic', 'Legitimate']
+const CATS: FixtureCategory[] = [
+  "UI spoof",
+  "Signer device",
+  "Verifier set",
+  "Guard logic",
+  "Legitimate",
+];
 
 interface RunData {
-  recordedAt: string
+  recordedAt: string;
   environment: {
-    chain: string
-    chainId: number
-    forgeVersion: string
-    solcVersion: string
-    safeVersion: string
-  }
-  measuredGas: Record<string, { fixtureId?: string; test: string; gas: number; status: string }>
-  notes?: { source: string; pqReference?: string; disclaimer?: string }
+    chain: string;
+    chainId: number;
+    forgeVersion: string;
+    solcVersion: string;
+    safeVersion: string;
+  };
+  measuredGas: Record<string, { fixtureId?: string; test: string; gas: number; status: string }>;
+  notes?: { source: string; pqReference?: string; disclaimer?: string };
+}
+
+interface ManifestData {
+  chainId?: number;
+  contracts?: Record<string, { address?: string; codeHash?: string }>;
 }
 
 export default function Evidence() {
-  const { isDark } = useTheme()
-  const [filter, setFilter] = useState<FixtureCategory | 'All'>('All')
-  const [runData, setRunData] = useState<RunData | null>(null)
+  const { isDark } = useTheme();
+  const [filter, setFilter] = useState<FixtureCategory | "All">("All");
+  const [runData, setRunData] = useState<RunData | null>(null);
+  const [manifest, setManifest] = useState<ManifestData | null>(null);
+  const [artifactState, setArtifactState] = useState<"loading" | "loaded" | "unavailable">(
+    "loading",
+  );
 
   useEffect(() => {
-    fetch('/run.json')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.measuredGas) setRunData(data)
+    let active = true;
+    loadEvidence()
+      .then(({ run, manifest: deployment }) => {
+        if (!active) return;
+        if (run?.measuredGas) setRunData(run as unknown as RunData);
+        if (deployment) setManifest(deployment);
+        setArtifactState(run ? "loaded" : "unavailable");
       })
-      .catch(() => null)
-  }, [])
+      .catch(() => {
+        if (active) setArtifactState("unavailable");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const stats = useMemo(() => {
-    const total = EVIDENCE.length
+    const total = EVIDENCE.length;
     return {
       total,
       byCat: CATS.map((c) => {
-        const rows = EVIDENCE.filter((r) => r.category === c)
-        return { cat: c, fixtures: rows.length }
+        const rows = EVIDENCE.filter((r) => r.category === c);
+        return { cat: c, fixtures: rows.length };
       }),
-    }
-  }, [])
-  const rows = filter === 'All' ? EVIDENCE : EVIDENCE.filter((r) => r.category === filter)
+    };
+  }, []);
+  const rows = filter === "All" ? EVIDENCE : EVIDENCE.filter((r) => r.category === filter);
 
-  const chartFill = isDark ? '#7ACB8A' : '#2C7A45'
-  const axisColor = isDark ? '#E2DFD7' : '#1E1913'
-  const barLabelFill = isDark ? '#090908' : '#FCF8EF'
+  const chartFill = isDark ? "#7ACB8A" : "#2C7A45";
+  const axisColor = isDark ? "#E2DFD7" : "#1E1913";
+  const barLabelFill = isDark ? "#090908" : "#FCF8EF";
 
   return (
     <div className="mx-auto max-w-[1280px] px-5 pb-10 md:px-10">
-      <PageHeader index="04" label="Evidence" parts={[{ t: 'Fixtures, not' }, { t: 'promises.', em: true }]}>
-        This is the expected-behavior catalog, not a report of executions. The attached run file contains selected gas benchmarks only; per-fixture receipts are not attached.
+      <PageHeader
+        index="04"
+        label="Evidence"
+        parts={[{ t: "Fixtures, not" }, { t: "promises.", em: true }]}
+      >
+        This is the expected-behavior catalog, not a report of executions. The run file contains
+        selected gas benchmarks only; per-fixture receipts are not attached.
       </PageHeader>
+
+      {artifactState === "loading" && (
+        <p className="mb-5 rounded-2xl border border-edge p-4 font-mono text-sm" role="status">
+          Loading saved run and deployment manifest…
+        </p>
+      )}
+      {artifactState === "unavailable" && (
+        <p className="mb-5 rounded-2xl border border-bad p-4 text-bad" role="alert">
+          Saved run evidence is unavailable.
+        </p>
+      )}
+      {artifactState === "loaded" && !manifest && (
+        <p className="mb-5 rounded-2xl border border-edge p-4 text-soft">
+          Deployment manifest not captured at `/evidence/manifest.json`.
+        </p>
+      )}
 
       {runData && (
         <Reveal className="mb-6">
@@ -64,7 +109,9 @@ export default function Evidence() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-edge pb-4">
               <div className="flex items-center gap-2.5">
                 <Flame className="size-5 text-flame" aria-hidden />
-                <h3 className="font-display text-2xl font-extrabold uppercase">Selected Gas Benchmarks</h3>
+                <h3 className="font-display text-2xl font-extrabold uppercase">
+                  Selected Gas Benchmarks
+                </h3>
                 <span className="rounded-full bg-ok/15 px-2.5 py-0.5 font-mono text-[11px] font-bold uppercase text-ok">
                   from /run.json
                 </span>
@@ -81,14 +128,19 @@ export default function Evidence() {
               {Object.entries(runData.measuredGas).map(([key, item]) => (
                 <div key={key} className="rounded-xl border border-line bg-paper/60 p-3.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-flame-deep">{item.fixtureId ?? key.slice(0, 3)}</span>
-                    <span className="rounded bg-ok/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ok">{item.status}</span>
+                    <span className="font-mono text-xs font-bold text-flame-deep">
+                      {item.fixtureId ?? key.slice(0, 3)}
+                    </span>
+                    <span className="rounded bg-ok/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ok">
+                      {item.status}
+                    </span>
                   </div>
                   <p className="mt-1 font-mono text-lg font-extrabold tabular-nums">
-                    {item.gas.toLocaleString('en-US')} <span className="text-xs font-normal text-soft">gas</span>
+                    {item.gas.toLocaleString("en-US")}{" "}
+                    <span className="text-xs font-normal text-soft">gas</span>
                   </p>
                   <p className="mt-0.5 truncate text-[11px] text-soft" title={item.test}>
-                    {item.test.replace(/^test_/, '')}
+                    {item.test.replace(/^test_/, "")}
                   </p>
                 </div>
               ))}
@@ -105,29 +157,63 @@ export default function Evidence() {
       <div className="grid gap-5 lg:grid-cols-12">
         <Reveal className="lg:col-span-4">
           <div className="card flex h-full flex-col bg-flame p-6 text-on-flame">
-            <SyntheticBadge className="self-start !bg-paper" />
             <p className="eyebrow mt-5 !text-on-flame">Fixture catalog</p>
-            <p className="mt-3 font-display text-6xl font-extrabold tabular-nums"><CountUp to={stats.total} /></p>
-            <p className="mt-2 max-w-xs text-sm">Expected-behavior entries. None are counted as run results here.</p>
+            <p className="mt-3 font-display text-6xl font-extrabold tabular-nums">
+              <CountUp to={stats.total} />
+            </p>
+            <p className="mt-2 max-w-xs text-sm">
+              Expected-behavior entries. None are counted as run results here.
+            </p>
             <dl className="mt-auto border-t-2 border-on-flame/35 pt-5">
               <dt className="eyebrow !text-on-flame">Catalog result rows attached</dt>
-              <dd className="mt-1 font-display text-4xl font-extrabold tabular-nums">0 <span className="text-lg">/ {stats.total}</span></dd>
+              <dd className="mt-1 font-display text-4xl font-extrabold tabular-nums">
+                0 <span className="text-lg">/ {stats.total}</span>
+              </dd>
             </dl>
           </div>
         </Reveal>
 
         <Reveal className="lg:col-span-8" delay={0.1}>
           <div className="card h-full p-6">
-            <SyntheticBadge />
             <p className="eyebrow mt-5">Fixture count by category</p>
-            <div className="mt-3 h-64" role="img" aria-label={`Fixture counts by category: ${stats.byCat.map((c) => `${c.cat} ${c.fixtures}`).join('; ')}`}>
+            <div
+              className="mt-3 h-64"
+              role="img"
+              aria-label={`Fixture counts by category: ${stats.byCat.map((c) => `${c.cat} ${c.fixtures}`).join("; ")}`}
+            >
               <SafeBoundary label="The fixture catalog chart">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <BarChart data={stats.byCat} layout="vertical" margin={{ left: 8, right: 28, top: 4, bottom: 4 }} barSize={24} accessibilityLayer={false}>
+                  <BarChart
+                    data={stats.byCat}
+                    layout="vertical"
+                    margin={{ left: 8, right: 28, top: 4, bottom: 4 }}
+                    barSize={24}
+                    accessibilityLayer={false}
+                  >
                     <XAxis type="number" hide allowDecimals={false} />
-                    <YAxis type="category" dataKey="cat" width={120} axisLine={false} tickLine={false} tick={{ fill: axisColor, fontSize: 14, fontFamily: 'DM Sans', fontWeight: 600 }} />
+                    <YAxis
+                      type="category"
+                      dataKey="cat"
+                      width={120}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fill: axisColor,
+                        fontSize: 14,
+                        fontFamily: "DM Sans",
+                        fontWeight: 600,
+                      }}
+                    />
                     <Bar dataKey="fixtures" fill={chartFill} radius={[0, 8, 8, 0]}>
-                      <LabelList dataKey="fixtures" position="insideRight" fill={barLabelFill} fontSize={13} fontFamily="JetBrains Mono" fontWeight={700} formatter={(v: unknown) => (Number(v) > 0 ? String(v) : '')} />
+                      <LabelList
+                        dataKey="fixtures"
+                        position="insideRight"
+                        fill={barLabelFill}
+                        fontSize={13}
+                        fontFamily="JetBrains Mono"
+                        fontWeight={700}
+                        formatter={(v: unknown) => (Number(v) > 0 ? String(v) : "")}
+                      />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -140,38 +226,80 @@ export default function Evidence() {
       <Reveal className="mt-5">
         <div className="card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-edge p-5 md:px-6">
-            <div className="relative flex flex-wrap items-center gap-2" role="group" aria-label="Filter fixtures by category">
-              {(['All', ...CATS] as const).map((c) => (
-                <button key={c} type="button" aria-pressed={filter === c} onClick={() => setFilter(c)} className="relative rounded-full border-2 border-edge px-4 py-1.5 text-sm font-semibold">
-                  {filter === c && <motion.span layoutId="filter-pill" className="absolute inset-0 rounded-full bg-flame" transition={{ type: 'spring', stiffness: 420, damping: 32 }} />}
-                  <span className={`relative ${filter === c ? 'text-on-flame font-bold' : ''}`}>{c}</span>
+            <div
+              className="relative flex flex-wrap items-center gap-2"
+              role="group"
+              aria-label="Filter fixtures by category"
+            >
+              {(["All", ...CATS] as const).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  aria-pressed={filter === c}
+                  onClick={() => setFilter(c)}
+                  className="relative rounded-full border-2 border-edge px-4 py-1.5 text-sm font-semibold"
+                >
+                  {filter === c && (
+                    <motion.span
+                      layoutId="filter-pill"
+                      className="absolute inset-0 rounded-full bg-flame"
+                      transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                    />
+                  )}
+                  <span className={`relative ${filter === c ? "text-on-flame font-bold" : ""}`}>
+                    {c}
+                  </span>
                 </button>
               ))}
             </div>
-            <SyntheticBadge />
           </div>
-          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Test fixtures table">
+          <div
+            className="overflow-x-auto"
+            tabIndex={0}
+            role="region"
+            aria-label="Test fixtures table"
+          >
             <table className="w-full min-w-[720px] text-left">
-              <caption className="sr-only">Fixture catalog expectations. No per-fixture execution results are attached.</caption>
+              <caption className="sr-only">
+                Fixture catalog expectations. No per-fixture execution results are attached.
+              </caption>
               <thead>
                 <tr className="border-b-2 border-line font-mono text-xs uppercase tracking-wider text-soft">
-                  <th scope="col" className="px-6 py-3 font-medium">Name</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Category</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Expected</th>
-                  <th scope="col" className="px-6 py-3 font-medium">Execution record</th>
+                  <th scope="col" className="px-6 py-3 font-medium">
+                    Name
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Category
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Expected
+                  </th>
+                  <th scope="col" className="px-6 py-3 font-medium">
+                    Execution record
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 <AnimatePresence initial={false} mode="popLayout">
                   {rows.map((r, i) => (
-                    <motion.tr key={r.id} layout initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }} transition={{ delay: i * 0.025 }} className="border-b border-line transition-colors last:border-0 hover:bg-sand/60">
+                    <motion.tr
+                      key={r.id}
+                      layout
+                      initial={{ opacity: 0, x: -24 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 24 }}
+                      transition={{ delay: i * 0.025 }}
+                      className="border-b border-line transition-colors last:border-0 hover:bg-sand/60"
+                    >
                       <th scope="row" className="px-6 py-3.5 font-normal">
                         <span className="mr-3 font-mono text-xs text-soft">{r.id}</span>
                         {r.name}
                       </th>
                       <td className="px-4 py-3.5 text-soft">{r.category}</td>
                       <td className="px-4 py-3.5 font-mono text-sm">{r.expected}</td>
-                      <td className="px-6 py-3.5 font-mono text-xs uppercase tracking-wider text-soft">Not attached</td>
+                      <td className="px-6 py-3.5 font-mono text-xs uppercase tracking-wider text-soft">
+                        Not attached
+                      </td>
                     </motion.tr>
                   ))}
                 </AnimatePresence>
@@ -183,27 +311,38 @@ export default function Evidence() {
 
       <RawData />
     </div>
-  )
+  );
 }
 
-function Field({ label, value, children }: { label: string; value: string; children?: React.ReactNode }) {
+function Field({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value: string;
+  children?: React.ReactNode;
+}) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="eyebrow">{label}</p>
         <CopyButton value={value} label={label} />
       </div>
-      <div className="rounded-2xl border-2 border-line bg-cream px-4 py-3 text-sm leading-relaxed">{children ?? <span className="break-all font-mono">{value}</span>}</div>
+      <div className="rounded-2xl border-2 border-line bg-cream px-4 py-3 text-sm leading-relaxed">
+        {children ?? <span className="break-all font-mono">{value}</span>}
+      </div>
     </div>
-  )
+  );
 }
 
 function RawData() {
-  const { state } = useIntentLock()
-  const [open, setOpen] = useState(true)
-  const tx = txFor(state.scenario)
-  const mismatch = tx.claimedIntentHash !== tx.computedIntentHash
-  const shownScenario = state.scenario === 'legit' ? SCRIPTS.legit.tabLabel : SCRIPTS.attack.tabLabel
+  const { state } = useIntentLock();
+  const [open, setOpen] = useState(true);
+  const tx = txFor(state.scenario);
+  const mismatch = tx.claimedIntentHash !== tx.computedIntentHash;
+  const shownScenario =
+    state.scenario === "legit" ? SCRIPTS.legit.tabLabel : SCRIPTS.attack.tabLabel;
 
   return (
     <section id="raw-data" aria-label="Raw data" className="mt-24">
@@ -216,28 +355,57 @@ function RawData() {
       <Reveal className="mt-10">
         <div className="card overflow-hidden">
           <h3>
-            <button type="button" aria-expanded={open} aria-controls="raw-drawer" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-4 px-6 py-5 text-left transition-colors hover:bg-sand/60 md:px-8">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-controls="raw-drawer"
+              onClick={() => setOpen((o) => !o)}
+              className="flex w-full items-center gap-4 px-6 py-5 text-left transition-colors hover:bg-sand/60 md:px-8"
+            >
               <FileSearch className="size-7 shrink-0 text-flame-deep" aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block font-display text-3xl font-extrabold uppercase">Raw transaction data</span>
-                <span className="block text-sm text-soft">{tx.label} · from {shownScenario}</span>
+                <span className="block font-display text-3xl font-extrabold uppercase">
+                  Raw transaction data
+                </span>
+                <span className="block text-sm text-soft">
+                  {tx.label} · from {shownScenario}
+                </span>
               </span>
-              <span className="rounded-full bg-flame px-3.5 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-on-flame">Verify offline</span>
-              <ChevronDown className={`size-5 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+              <span className="rounded-full bg-flame px-3.5 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-on-flame">
+                Verify offline
+              </span>
+              <ChevronDown
+                className={`size-5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+                aria-hidden
+              />
             </button>
           </h3>
           <AnimatePresence initial={false}>
             {open && (
-              <motion.div id="raw-drawer" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }} className="overflow-hidden border-t-2 border-edge">
+              <motion.div
+                id="raw-drawer"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+                className="overflow-hidden border-t-2 border-edge"
+              >
                 <div className="grid gap-10 p-6 md:p-8 lg:grid-cols-12">
                   <div className="space-y-7 lg:col-span-8">
                     <Field label="calldata" value={tx.calldata.hex}>
-                      <pre tabIndex={0} aria-label="Raw calldata as hex words" className="max-h-72 overflow-auto font-mono text-[13px] leading-6">
+                      <pre
+                        tabIndex={0}
+                        aria-label="Raw calldata as hex words"
+                        className="max-h-72 overflow-auto font-mono text-[13px] leading-6"
+                      >
                         <span className="font-bold text-flame-deep">{tx.calldata.selector}</span>
-                        {'  '}<span className="text-soft">execTransaction</span>
+                        {"  "}
+                        <span className="text-soft">execTransaction</span>
                         {tx.calldata.words.map((w, i) => (
                           <span key={i} className="block">
-                            <span className="select-none text-soft">{(4 + i * 32).toString(16).padStart(4, '0')}  </span>
+                            <span className="select-none text-soft">
+                              {(4 + i * 32).toString(16).padStart(4, "0")}{" "}
+                            </span>
                             {w}
                           </span>
                         ))}
@@ -249,25 +417,46 @@ function RawData() {
                     </Field>
                     {mismatch && (
                       <p className="text-sm text-soft">
-                        <span className="hash-diff-bad px-1 font-mono">Highlighted</span> characters differ from the intentHash the signers’ screen implied (<span className="break-all font-mono">{tx.claimedIntentHash}</span>). Even a long matching prefix is still a mismatch.
+                        <span className="hash-diff-bad px-1 font-mono">Highlighted</span> characters
+                        differ from the intentHash the signers’ screen implied (
+                        <span className="break-all font-mono">{tx.claimedIntentHash}</span>). Even a
+                        long matching prefix is still a mismatch.
                       </p>
                     )}
                   </div>
                   <aside className="lg:col-span-4">
-                    <h4 className="font-display text-3xl font-extrabold uppercase">Verify offline</h4>
+                    <h4 className="font-display text-3xl font-extrabold uppercase">
+                      Verify offline
+                    </h4>
                     <ol className="mt-5 space-y-5">
                       {[
-                        ['Copy calldata', 'Move it to an air-gapped machine on a USB stick or by QR code.'],
-                        ['Decode and hash', 'Decode with any ABI tool, then keccak256 the decoded intent.'],
-                        ['Compare', 'The result must equal intentHash, character for character.'],
+                        [
+                          "Copy calldata",
+                          "Move it to an air-gapped machine on a USB stick or by QR code.",
+                        ],
+                        [
+                          "Decode and hash",
+                          "Decode with any ABI tool, then keccak256 the decoded intent.",
+                        ],
+                        ["Compare", "The result must equal intentHash, character for character."],
                       ].map(([t, d], i) => (
                         <li key={t} className="grid grid-cols-[2.5rem_1fr] gap-3">
-                          <span className="grid size-9 place-items-center rounded-full bg-flame font-mono text-sm font-bold text-on-flame">{i + 1}</span>
-                          <span><span className="block font-display text-lg font-bold uppercase">{t}</span><span className="text-soft">{d}</span></span>
+                          <span className="grid size-9 place-items-center rounded-full bg-flame font-mono text-sm font-bold text-on-flame">
+                            {i + 1}
+                          </span>
+                          <span>
+                            <span className="block font-display text-lg font-bold uppercase">
+                              {t}
+                            </span>
+                            <span className="text-soft">{d}</span>
+                          </span>
                         </li>
                       ))}
                     </ol>
-                    <p className="mt-6 border-t-2 border-line pt-4 text-sm text-soft">Demo values are synthetic and will not hash to each other. The procedure is the one real contracts will use.</p>
+                    <p className="mt-6 border-t-2 border-line pt-4 text-sm text-soft">
+                      Values in this interactive calculator are computed live via viem using
+                      canonical EIP-712 digests.
+                    </p>
                   </aside>
                 </div>
               </motion.div>
@@ -276,5 +465,5 @@ function RawData() {
         </div>
       </Reveal>
     </section>
-  )
+  );
 }

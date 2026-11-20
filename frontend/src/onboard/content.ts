@@ -6,8 +6,6 @@ export const ONBOARD_COPY = {
   title: "Turn policy into a verification workflow.",
   introduction:
     "Draft explicit transfer limits, inspect what can be enforced, and prepare a verifier bundle without exposing private keys.",
-  syntheticBadge: "SYNTHETIC LOCAL CHAIN",
-  previewBadge: "PREVIEW",
   back: "Back",
   next: "Continue",
   startOver: "Start over",
@@ -38,14 +36,11 @@ export const ONBOARD_COPY = {
   parseButton: "Use pasted policy",
   templateTitle: "Start from a template",
   templateDescriptions: {
-    sample: "A bounded native transfer policy for the sample flow.",
-    "deny-all": "Zero caps and empty recipient lists; all known transfers remain denied.",
-    "native-only": "Native transfer allowlist and cap, with ERC-20 disabled.",
+    sample:
+      "Schema-valid empty policy; all known transfers stay denied until you configure real limits and recipients.",
   },
   templateLabels: {
-    sample: "Sample policy",
-    "deny-all": "Deny all",
-    "native-only": "Native transfers only",
+    sample: "Blank deny-all policy",
   },
   humanBanner: "AI drafts; a human approves; compiler is deterministic.",
   needsHumanDecision: "NEEDS HUMAN DECISION",
@@ -57,9 +52,9 @@ export const ONBOARD_COPY = {
     NOT_ENFORCEABLE: "NOT_ENFORCEABLE" satisfies RuleTag,
   },
   saveValue: "Apply value",
-  simulateTitle: "Try sample transactions",
+  simulateTitle: "Run decoder test vectors",
   simulateDescription:
-    "Each run sends raw Safe transaction fields to the verifier dry-run API when configured. It never signs or executes.",
+    "These fixed test inputs are combined with the configured Safe context and sent to the verifier dry-run API. They are not live user transactions and are never signed or executed.",
   run: "Run",
   running: "Decoding…",
   matchingRule: "Matching rule",
@@ -78,18 +73,17 @@ export const ONBOARD_COPY = {
   hashesMatch: "POLICY HASH MATCH",
   hashMismatch: "POLICY HASH MISMATCH",
   healthNotChecked: "NOT CHECKED BY REMOTE VERIFIER",
-  previewHealth: "PREVIEW · HASH MATCH",
   verifierHealthSummary: "Hash status across configured verifier addresses",
   verifierAddresses: ["Verifier A", "Verifier B", "Verifier C"],
   interfaceTitle: "Verifier interface",
   interfaceDescription:
     "Implement a raw transaction decoder that returns the shared decision enum, canonical intent, and policy-bound hashes. Do not accept proposal labels as input.",
   conformanceTitle: "Conformance run",
-  conformanceDescription: "Catalog decision checks",
+  conformanceDescription:
+    "Three raw transaction decoder vectors sent to the configured verifier API. This does not run the execution catalog.",
   runConformance: "Run conformance",
   runningConformance: "Running fixtures…",
-  fixturesLabel: "fixtures",
-  previewConformance: "Preview fixture mapping only; no verifier endpoint was called.",
+  fixturesLabel: "vectors",
   deployTitle: "Deployment checklist",
   deployDescription:
     "Complete these steps in order. Each check is local to this page and is not saved.",
@@ -113,7 +107,7 @@ export const ONBOARD_COPY = {
     "Could not read that policy file. Check that it is valid JSON in the IntentLock policy v1 format.",
   compileError: "The compiler rejected this policy file.",
   lintError: "Resolve the policy lint errors before marking this policy ready.",
-  noBackend: "Backend is unavailable. Preview actions are still available.",
+  noBackend: "Verifier API is unavailable. Live checks require a reachable configured backend.",
   apiError: "The verifier API could not complete this request.",
   privacyNote: "No browser signing. No private key input. No local storage.",
   unresolvedTag: "NEEDS HUMAN DECISION",
@@ -194,7 +188,6 @@ export const TRANSACTION_COPY = [
     data: "0x",
     operation: 0,
     expectedPreview: "ATTEST",
-    matchingRuleId: "native-recipient-cap",
   },
   {
     id: "unlisted-native",
@@ -205,7 +198,6 @@ export const TRANSACTION_COPY = [
     data: "0x",
     operation: 0,
     expectedPreview: "REFUSE_POLICY",
-    matchingRuleId: "native-recipient-cap",
   },
   {
     id: "unknown-calldata",
@@ -216,7 +208,6 @@ export const TRANSACTION_COPY = [
     data: "0xdeadbeef",
     operation: 0,
     expectedPreview: "REFUSE_UNSUPPORTED",
-    matchingRuleId: "human-risk-interpretation",
   },
   {
     id: "delegatecall",
@@ -227,7 +218,6 @@ export const TRANSACTION_COPY = [
     data: "0x",
     operation: 1,
     expectedPreview: "REFUSE_POLICY",
-    matchingRuleId: "delegatecall-block",
   },
 ] as const;
 
@@ -238,7 +228,7 @@ export const CHECKLIST_COPY = [
   "Run the 40-fixture conformance suite against each verifier endpoint.",
   "Deploy the registry and guard to the selected local chain.",
   "Confirm Safe owners, threshold, guard address, and empty module set.",
-  "Run the demo transactions and export chain-backed evidence.",
+  "Run the validation transactions and export chain-backed evidence.",
   "Review the runbook, hashes, deployment manifest, and evidence together.",
 ] as const;
 

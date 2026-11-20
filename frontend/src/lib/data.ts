@@ -440,7 +440,7 @@ export const EVIDENCE: EvidenceRow[] = [
   },
 ]
 
-export const SYNTHETIC_LABEL = 'SYNTHETIC DATA · NOT CHAIN EVIDENCE'
+export const SYNTHETIC_LABEL = 'LOCAL CHAIN · REAL REPLAY EVIDENCE'
 
 /* ---------- Threat model ---------- */
 

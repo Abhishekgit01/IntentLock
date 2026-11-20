@@ -6,7 +6,7 @@ import { SCENARIO_ORDER, SCRIPTS } from '@/lib/script'
 import { useIntentLock } from '@/lib/useIntentLockEvents'
 import { BalanceMeter } from '@/components/BalanceMeter'
 import { FlowSankey } from '@/components/FlowSankey'
-import { PageHeader, Reveal, SafeBoundary, Stamp, fmtClock } from '@/components/ui'
+import { Headline, Reveal, SafeBoundary, Stamp, fmtClock } from '@/components/ui'
 
 export default function Demo() {
   const { state, script, select, run, reset } = useIntentLock()
@@ -27,15 +27,25 @@ export default function Demo() {
 
   return (
     <div className="mx-auto max-w-[1280px] px-5 pb-10 md:px-10">
-      <PageHeader index="01" label="Live demo console" parts={[{ t: 'Same transaction.' }, { t: 'Different outcome.', em: true }]}>
-        Signers see one screen. The chain would do another. Pick a scenario and watch who stops it.
-      </PageHeader>
-
-      <div className="-mt-6 mb-10">
-        <Link to="/workbench" className="btn btn-primary">
-          Open workbench
-        </Link>
-      </div>
+      <header className="pb-8 pt-24 md:pt-[6.5rem]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <Headline
+              as="h1"
+              parts={[{ t: 'Same transaction.' }, { t: 'Different outcome.', em: true }]}
+              className="display-type text-[clamp(2.6rem,6vw,5.25rem)]"
+            />
+            <p className="mt-4 max-w-2xl text-lg text-soft md:text-xl">
+              Signers see one screen. The chain would do another. Pick a scenario and watch who stops it.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <Link to="/workbench" className="btn btn-primary !px-6 !py-3 text-base">
+              Open 3D workbench
+            </Link>
+          </div>
+        </div>
+      </header>
 
       <div role="tablist" aria-label="Scenario" className="relative flex flex-wrap gap-2 rounded-[28px] border-2 border-edge bg-paper p-2">
         {SCENARIO_ORDER.map((id, i) => {

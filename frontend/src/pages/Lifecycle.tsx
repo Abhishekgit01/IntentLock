@@ -218,7 +218,7 @@ export default function Lifecycle() {
             </div>
             <p className={`mt-4 ${tl.active ? 'text-on-flame/85' : 'text-soft'}`}>
               {tl.active
-                ? 'High-risk transaction. Owners can still pause it. 24 h in production, compressed to 6 s for this demo.'
+                ? 'High-risk transaction. Owners can still pause it. 24 h in production, compressed to 6 s for local execution.'
                 : showTl
                   ? 'Timelock elapsed. The queued transaction was released for execution.'
                   : state.scenario === 'attack'

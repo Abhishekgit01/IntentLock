@@ -91,7 +91,7 @@ const legit: ScenarioScript = {
     ev(7400, [{ type: 'verifier', id: 'A', status: 'attested' }], undefined, { level: 'ok', text: 'Verifier A: attested (1 of 3)' }),
     ev(8800, [{ type: 'verifier', id: 'B', status: 'attested' }, { type: 'stamp', stamp: 'verified' }], 'Two of three verifiers attested to the exact transaction.', { level: 'ok', text: 'Verifier B: attested (2 of 3). Threshold reached' }),
     ev(10000, [{ type: 'verifier', id: 'C', status: 'attested' }], undefined, { level: 'ok', text: 'Verifier C: attested (3 of 3)' }),
-    ev(10800, [{ type: 'phase', phase: 'timelock' }, { type: 'timelock', durationMs: 6000 }], 'High-risk policy starts a timelock. 24 h in production, compressed to 6 s here.', { level: 'warn', text: 'Timelock started (demo: 6 s, production: 24 h)' }),
+    ev(10800, [{ type: 'phase', phase: 'timelock' }, { type: 'timelock', durationMs: 6000 }], 'High-risk policy starts a timelock. 24 h in production, compressed to 6 s here.', { level: 'warn', text: 'Timelock started (simulation: 6 s, production: 24 h)' }),
     ev(16800, [{ type: 'phase', phase: 'executed' }, { type: 'flow', flow: 'flowing' }, { type: 'move', durationMs: 1800, amount: TRANSFER_AMOUNT }], 'Timelock elapsed. The transfer executes.', { level: 'ok', text: 'execute(): 0.1 ETH sent to cold wallet 0x71C7…e4A1' }),
     ev(18800, [{ type: 'flow', flow: 'settled' }], 'Everything matched, so the chain executed. Vault: 2,479.90 ETH.', { level: 'ok', text: 'Vault balance: 2,479.90 ETH' }),
   ],
@@ -100,7 +100,7 @@ const legit: ScenarioScript = {
 export const SCRIPTS: Record<ScenarioId, ScenarioScript> = { normal, attack, legit }
 export const SCENARIO_ORDER: ScenarioId[] = ['normal', 'attack', 'legit']
 
-const IDLE_CAPTION = 'Pick a scenario and press run. Scripted event stream, no chain connected.'
+const IDLE_CAPTION = 'Pick a scenario and press run to inspect the transaction verification sequence.'
 const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
 
 /** Pure fold: (scenario, elapsed) -> everything the UI shows. Deterministic and replayable. */

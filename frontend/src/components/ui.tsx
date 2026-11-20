@@ -299,7 +299,7 @@ export class SafeBoundary extends Component<BoundaryProps, { failed: boolean }> 
       <div role="alert" className={`card-soft flex flex-col items-start gap-3 p-6 ${this.props.className ?? ''}`}>
         <TriangleAlert className="size-6 text-flame-deep" aria-hidden />
         <p className="font-display text-2xl font-bold uppercase">{this.props.label} could not render on this device.</p>
-        <p className="text-soft">The same facts are in the event ledger and tables, so the demo can continue.</p>
+        <p className="text-soft">The same facts are in the event ledger and tables, so execution can continue.</p>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => this.setState({ failed: false })}>Try again</button>
       </div>
     )

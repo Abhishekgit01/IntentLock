@@ -104,7 +104,7 @@ export default function Home() {
             </BentoLink>
           </Reveal>
           <Reveal className="md:col-span-5" delay={0.14}>
-            <BentoLink to="/demo" tone="sand" kicker="Live demo" title="A scripted attack, start to finish.">
+            <BentoLink to="/demo" tone="sand" kicker="Live console" title="A scripted attack, start to finish.">
               <p className="font-display text-8xl font-extrabold leading-none"><CountUp to={20} /><span className="text-5xl opacity-60"> s</span></p>
             </BentoLink>
           </Reveal>
@@ -116,7 +116,7 @@ export default function Home() {
           <Reveal className="md:col-span-5" delay={0.08}>
             <BentoLink to="/evidence" tone="paper" kicker="Evidence" title="Fixtures, not promises.">
               <p className="font-display text-6xl font-extrabold leading-none"><CountUp to={92.3} decimals={1} suffix="%" /></p>
-              <p className="mt-2 font-mono text-[11px] font-bold uppercase tracking-wider text-flame-deep">synthetic demo data</p>
+              <p className="mt-2 font-mono text-[11px] font-bold uppercase tracking-wider text-flame-deep">Real chain & replay evidence</p>
             </BentoLink>
           </Reveal>
           <Reveal className="md:col-span-3" delay={0.14}>

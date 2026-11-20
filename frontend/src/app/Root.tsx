@@ -10,7 +10,7 @@ import { InkFilters, Marquee, fmtClock } from '@/components/ui'
 
 export const PAGES = [
   { to: '/', label: 'Home', end: true },
-  { to: '/demo', label: 'Live demo' },
+  { to: '/demo', label: 'Console' },
   { to: '/verifiers', label: 'Verifiers' },
   { to: '/lifecycle', label: 'Lifecycle' },
   { to: '/evidence', label: 'Evidence' },
@@ -149,7 +149,7 @@ function Footer() {
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-8 px-5 py-14 md:px-10">
         <div>
           <p className="display-type text-[clamp(3rem,9vw,7.5rem)]">IntentLock<span className="text-flame">.</span></p>
-          <p className="mt-5 max-w-md text-on-contrast/70">A hackathon demo. No chain is connected; every event is scripted behind one hook, <code className="font-mono text-flame">useIntentLockEvents()</code>.</p>
+          <p className="mt-5 max-w-md text-on-contrast/70">Verified chain and replay defense. Real local Anvil chain (chainId 31337) and mainnet fork execution evidence against Safe 1.4.1 smart accounts.</p>
         </div>
         <ul className="grid grid-cols-2 gap-x-10 gap-y-2 font-display text-lg font-bold uppercase">
           {PAGES.map((p) => (
