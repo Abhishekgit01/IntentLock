@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { assertSafeReady, createChainClient } from './safe.js';
+import { keccak256 } from 'viem';
+import { assertSafeReady, createChainClient, SAFE_ABI } from './safe.js';
 import { createProposalService, serializeProposal } from './proposals.js';
 import { addAttestation } from './attestations.js';
 import { subscribe } from './events.js';
@@ -124,6 +125,82 @@ export function buildApp(config) {
   });
 
   app.get('/v1/config', async () => proposalService.getConfigView());
+
+  app.get('/v1/context', async (request, reply) => {
+    try {
+      const chainId = await client.getChainId();
+      const block = await client.getBlock({ blockTag: 'latest' });
+      const context = {
+        chainId,
+        observedAtBlock: block.number.toString(),
+        blockHash: block.hash,
+        safeVersion: config.safeVersion,
+        safeAddress: config.safeAddress ?? null,
+        safeNonce: null,
+        safeBalanceWei: null,
+        safeCodeHash: null,
+        guardAddress: null,
+        enabledModules: null,
+        source: 'rpc_read',
+      };
+
+      if (!config.safeAddress) {
+        return reply.code(503).send({
+          ...context,
+          ready: false,
+          error: 'SAFE_NOT_CONFIGURED',
+        });
+      }
+      await assertSafeReady(client, config, config.chainId, config.safeAddress);
+      const [safeNonce, safeBalance, code, modules, guardSlot] =
+        await Promise.all([
+          client.readContract({
+            address: config.safeAddress,
+            abi: SAFE_ABI,
+            functionName: 'nonce',
+            blockNumber: block.number,
+          }),
+          client.getBalance({
+            address: config.safeAddress,
+            blockNumber: block.number,
+          }),
+          client.getBytecode({
+            address: config.safeAddress,
+            blockNumber: block.number,
+          }),
+          client.readContract({
+            address: config.safeAddress,
+            abi: SAFE_ABI,
+            functionName: 'getModulesPaginated',
+            args: ['0x0000000000000000000000000000000000000001', 10n],
+            blockNumber: block.number,
+          }),
+          client.getStorageAt({
+            address: config.safeAddress,
+            slot: '0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8',
+            blockNumber: block.number,
+          }),
+        ]);
+      context.safeNonce = safeNonce.toString();
+      context.safeBalanceWei = safeBalance.toString();
+      context.safeCodeHash = code && code !== '0x' ? keccak256(code) : null;
+      context.guardAddress = guardSlot
+        ? `0x${BigInt(guardSlot).toString(16).slice(-40).padStart(40, '0')}`
+        : null;
+      context.enabledModules = modules[0].length;
+      return { ...context, ready: true };
+    } catch (error) {
+      request.log.warn({ err: error }, 'Unable to read live Safe context');
+      return reply.code(503).send({
+        chainId: config.chainId,
+        safeVersion: config.safeVersion,
+        safeAddress: config.safeAddress ?? null,
+        source: 'rpc_read',
+        ready: false,
+        error: error.code ?? 'RPC_UNAVAILABLE',
+      });
+    }
+  });
 
   app.post('/v1/proposals', async (request, reply) => {
     const proposal = await proposalService.create(request.body);

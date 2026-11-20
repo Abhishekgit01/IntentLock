@@ -360,9 +360,13 @@ export function createProposalService({ client, config, store }) {
       return {
         chainId: config.chainId,
         safeVersion: config.safeVersion,
+        safeAddress: config.safeAddress ?? null,
         safeConfigured: Boolean(config.safeAddress),
         policyConfigured: Boolean(policyHash),
         policyHash: policyHash ?? null,
+        maxNativeTransferWei: config.maxNativeTransferWei?.toString() ?? null,
+        nativeRecipients: config.nativeRecipients,
+        verifierAddresses: config.verifierAddresses,
         verifierSetConfigured: Boolean(
           config.verifierSetId && config.verifierAddresses.length,
         ),

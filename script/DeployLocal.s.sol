@@ -29,8 +29,9 @@ contract DeployLocal is Script {
     uint256 private constant VERIFIER_3_KEY = 0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a;
 
     bytes32 private constant VERIFIER_SET_ID = keccak256("INTENTLOCK_LOCAL_VERIFIERS_V1");
-    bytes32 private constant POLICY_HASH = keccak256("INTENTLOCK_LOCAL_POLICY_V1");
     string private constant SAFE_SOURCE_COMMIT = "bf943f80fec5ac647159d26161446ac5d716a294";
+    address private constant ALLOWED_NATIVE_RECIPIENT = 0x71c7656eC7ab88b098DeFB751b7401b5f6d8E4a1;
+    uint256 private constant MAX_NATIVE_TRANSFER_WEI = 100 ether;
 
     function run() external {
         require(block.chainid == 31337, "DeployLocal only supports Anvil chain 31337");
@@ -60,13 +61,21 @@ contract DeployLocal is Script {
         Safe safe = Safe(payable(address(proxy)));
         deployed.safe = address(safe);
 
+        bytes32 policyHash = _policyHash();
         IntentLockRegistry registry =
-            new IntentLockRegistry(deployer, deployed.verifiers, 2, VERIFIER_SET_ID, POLICY_HASH, address(0));
+            new IntentLockRegistry(deployer, deployed.verifiers, 2, VERIFIER_SET_ID, policyHash, address(0));
         deployed.registry = address(registry);
-        IntentLockGuard guard = new IntentLockGuard(address(safe), address(registry), POLICY_HASH);
+        IntentLockGuard guard = new IntentLockGuard(address(safe), address(registry), policyHash);
         deployed.guard = address(guard);
         registry.setGuard(address(guard));
+        _installGuard(safe, guard);
 
+        (address[] memory enabledModules,) = safe.getModulesPaginated(address(0x1), 10);
+        require(enabledModules.length == 0, "Safe module set must start empty");
+        vm.stopBroadcast();
+    }
+
+    function _installGuard(Safe safe, IntentLockGuard guard) private {
         bytes memory setGuardData = abi.encodeWithSignature("setGuard(address)", address(guard));
         bytes32 safeTxHash = safe.getTransactionHash(
             address(safe), 0, setGuardData, Enum.Operation.Call, 0, 0, 0, address(0), payable(address(0)), safe.nonce()
@@ -88,9 +97,6 @@ contract DeployLocal is Script {
             ),
             "Safe guard setup failed"
         );
-        (address[] memory enabledModules,) = safe.getModulesPaginated(address(0x1), 10);
-        require(enabledModules.length == 0, "Safe module set must start empty");
-        vm.stopBroadcast();
     }
 
     function _writeManifest(DeploymentAddresses memory deployed) private {
@@ -112,7 +118,33 @@ contract DeployLocal is Script {
         json = vm.serializeBytes32("deployment", "verifierSetId", VERIFIER_SET_ID);
         json = vm.serializeAddress("deployment", "verifiers", deployed.verifiers);
         json = vm.serializeUint("deployment", "verifierThreshold", 2);
-        json = vm.serializeBytes32("deployment", "policyHash", POLICY_HASH);
+        json = vm.serializeBytes32("deployment", "policyHash", _policyHash());
+        json = vm.serializeAddress("deployment", "allowedNativeRecipient", ALLOWED_NATIVE_RECIPIENT);
+        json = vm.serializeUint("deployment", "maxNativeTransferWei", MAX_NATIVE_TRANSFER_WEI);
         vm.writeJson(json, "deployments/anvil-31337.json");
+    }
+
+    function _policyHash() private pure returns (bytes32) {
+        bytes32 policyTypeHash = keccak256(
+            "PolicyV1(uint32 schemaVersion,uint256 maxNativeTransferWei,bytes32 nativeRecipientSetHash,bytes32 erc20TokenMapHash,bytes32 erc20RecipientSetHash,uint256 maxErc20TransferBaseUnits)"
+        );
+        address[] memory nativeRecipients = new address[](1);
+        nativeRecipients[0] = ALLOWED_NATIVE_RECIPIENT;
+        address[] memory noAddresses = new address[](0);
+        bytes32[] memory noCodeHashes = new bytes32[](0);
+        bytes32 nativeRecipientSetHash = keccak256(abi.encode(nativeRecipients));
+        bytes32 erc20TokenMapHash = keccak256(abi.encode(noAddresses, noCodeHashes));
+        bytes32 erc20RecipientSetHash = keccak256(abi.encode(noAddresses));
+        return keccak256(
+            abi.encode(
+                policyTypeHash,
+                uint32(1),
+                MAX_NATIVE_TRANSFER_WEI,
+                nativeRecipientSetHash,
+                erc20TokenMapHash,
+                erc20RecipientSetHash,
+                uint256(0)
+            )
+        );
     }
 }

@@ -23,7 +23,8 @@ The server binds to `127.0.0.1:8787` by default. Browser origins must be listed 
 | Route | Behavior |
 |---|---|
 | `GET /health` | RPC, configured Safe, policy readiness, and unavailable execution adapters. Returns 503 while required local configuration is missing. |
-| `GET /v1/config` | Non-secret capability/configuration summary for the UI. |
+| `GET /v1/config` | Non-secret capability/configuration summary, Safe address, public policy allowlist, and verifier addresses for the UI. |
+| `GET /v1/context` | Current RPC block and Safe version/address/nonce/balance/code hash, installed guard, and enabled module count. State fields are read at the returned block. |
 | `POST /v1/proposals` | Validates Safe transaction fields, chain, Safe address/version/nonce, computes `safeTxHash` from Safe 1.4.1, reads target code at a pinned block, decodes/policies supported cases, stores proposal, returns event URL. Client-supplied hashes are rejected. |
 | `GET /v1/proposals/:proposalId` | Returns normalized proposal, decode/policy result, verifier threshold progress, and execution gate. |
 | `GET /v1/proposals/:proposalId/events` | Replays events and follows updates through Server-Sent Events. `Last-Event-ID` is the event sequence. |
@@ -31,6 +32,10 @@ The server binds to `127.0.0.1:8787` by default. Browser origins must be listed 
 | `POST /v1/proposals/:proposalId/execute` | Intentionally unavailable until registry submission and Safe execution adapters exist. Never sends a transaction in this version. |
 
 The decoder accepts native `CALL` transfers with empty calldata to an EOA and canonical ERC-20 `transfer(address,uint256)` calls to configured tokens whose live runtime code hash matches the configured hash. ERC-20 amounts stay in base units; the backend does not trust token metadata such as decimals or symbols for policy. ERC-20 transfers require zero native value, an allowlisted recipient, and an amount within the configured cap. ERC-20 approvals are always refused; unknown contracts/selectors, malformed or non-canonical calldata, and calldata calls to addresses without code are quarantined. It hard-refuses `DELEGATECALL`. The timelocked guard-replacement flow and on-chain registry submission/Safe execution are not implemented in this backend slice.
+
+The `/workbench` page has a separate **Live backend** action. It refreshes `/v1/context`, submits the currently selected scenario's concrete Safe fields to `POST /v1/proposals`, and follows its Server-Sent Events stream. Safe hashes, decoded intent, policy decision, source block, and Safe state are real RPC/API results. These are not on-chain execution receipts: the story animation remains marked synthetic, the event stream has `source=api`, and registry submission/Safe execution remain unavailable.
+
+During local development, the frontend's Vite server proxies `/api/*` to `http://127.0.0.1:8787`. Set `VITE_INTENTLOCK_API_URL` to an API origin only when a deployment has a separately configured backend/CORS origin.
 
 ## Proposal request
 
