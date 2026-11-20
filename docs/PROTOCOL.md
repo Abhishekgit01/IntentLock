@@ -59,6 +59,40 @@ This example is illustrative; exact canonical encoding needs to be specified in 
 
 `intentHash` is the typed hash of the canonical intent fields excluding the `intentHash` field itself. Bind the intent to the `safeTxHash` and scoped context to prevent a valid semantic statement from being transplanted to another transaction.
 
+### Locked v1 canonical encoding
+
+The backend and Solidity implementation use EIP-712 hashing for `intentHash`; JSON serialization is never hashed. The intent domain is `{ name: "IntentLockIntent", version: "1", chainId, verifyingContract: safe }`. The primary type is:
+
+```solidity
+struct IntentAction {
+    bytes32 kind;          // keccak256(UTF-8 canonical action name, e.g. "native.transfer")
+    address target;        // action target; recipient for native transfer, token contract for ERC-20
+    address asset;         // address(0) for native currency; token address for ERC-20
+    address counterparty;  // recipient or spender; address(0) only when not applicable
+    uint256 amount;        // base units
+    string[] effects;      // canonical effect strings in execution order
+}
+
+struct IntentV1 {
+    uint32 schemaVersion;  // 1
+    uint256 safeNonce;
+    bytes32 safeTxHash;
+    uint8 operation;
+    uint8 policyClass;
+    bytes32 targetCodeHash;
+    address resolvedImplementation;
+    bytes32 implementationCodeHash;
+    bytes32 policyHash;
+    IntentAction[] actions; // preserve transaction execution order
+}
+```
+
+For a native transfer, the single action is `kind=keccak256("native.transfer")`, `target=counterparty=recipient`, `asset=address(0)`, `amount=value`, and effects are exactly `decrease.safe.native:<amount>` then `increase.<lowercase-recipient>.native:<amount>`. The recipient is a lowercase 20-byte hex address and the amount is an unsigned decimal integer string. EIP-712 string-array element hashing and array order follow the standard typed-data rules. The `intentHash` is the EIP-712 digest of `IntentV1` using the domain above; action names and effects are generated from decoder fields, never copied from client labels.
+
+The v1 policy hash commits to the native-recipient allowlist and transfer cap. Normalize and numerically sort the unique allowlist addresses, compute `recipientSetHash = keccak256(abi.encode(address[] sortedRecipients))`, define `POLICY_TYPEHASH = keccak256("PolicyV1(uint32 schemaVersion,uint256 maxNativeTransferWei,bytes32 recipientSetHash)")`, and compute `policyHash = keccak256(abi.encode(POLICY_TYPEHASH, uint32(1), maxNativeTransferWei, recipientSetHash))`. The allowlist and cap are required config; an empty or missing setting fails closed. Any policy field change creates a different hash.
+
+The attestation EIP-712 domain is `{ name: "IntentLock", version: "1", chainId, verifyingContract: registry }`. Its primary type is the exact field order and widths in `IntentAttestation` below. The type definition and hash vectors must be shared by backend, verifier, and Solidity. Changing either domain or type is a protocol version change, not a backend-only refactor.
+
 ## 3. EIP-712 attestation
 
 The attestation must commit to:

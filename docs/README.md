@@ -21,12 +21,14 @@ This folder turns the project brief into an implementation reference. The Figma 
 15. [Setup skeleton](SETUP.md) — toolchain decisions and commands to complete as implementation lands.
 16. [Fixture catalog](fixtures/catalog.json) and [schema](fixtures/catalog.schema.json) — machine-readable expected outcomes and criticality.
 17. [Third-party notices](THIRD_PARTY.md) — candidate reference/reuse inventory and license checks.
+18. [UI/backend integration prompt](UI_BACKEND_INTEGRATION_PROMPT.md) — copyable instructions for adapting the existing Figma UI without replacing its current work.
+19. [Backend package](../backend/README.md) — local API endpoints, configuration, supported scope, and current integration limits.
 
 ## Source and status
 
 These documents specify IntentLock as a proof of concept using a local EVM, a Safe multisig, independent intent verifiers, and an on-chain guard. They were prepared from the project brief supplied by the project owner. Safe hook/nonce/module details have been checked against Safe Smart Account `v1.4.1`; incident and product claims remain individually tracked in [CLAIMS_REGISTER.md](CLAIMS_REGISTER.md).
 
-This is a design specification, not evidence that a feature is already implemented, audited, or production-safe. Open design decisions are called out explicitly instead of being silently treated as settled facts.
+These are implementation specifications, not evidence that every feature is already implemented, audited, or production-safe. The backend currently has a first local API slice; it cannot submit attestations to an on-chain registry or execute a Safe transaction. Open design decisions are called out explicitly instead of being silently treated as settled facts.
 
 ## UI/Figma boundary
 

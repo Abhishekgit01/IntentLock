@@ -16,7 +16,7 @@ Each event is a JSON object with these required fields:
 | `sequence` | integer | Monotonically increasing within a scenario; consumers sort by this, not arrival time. |
 | `type` | string | One of the event types below. |
 | `occurredAt` | RFC 3339 string | Timestamp supplied by the event source. For chain events retain the block timestamp separately. |
-| `source` | `mock`, `chain_log`, or `rpc_observation` | States where the event came from. Never infer `chain_log` from a mock. |
+| `source` | `mock`, `api`, `chain_log`, or `rpc_observation` | States where the event came from. API workflow events are not chain evidence; never infer `chain_log` from a mock or API event. |
 | `safe` | address or null | Checksummed display value; comparisons use normalized 20-byte address. |
 | `proposalId` | string or null | Coordinator proposal identifier. |
 | `safeTxHash` | bytes32 or null | Canonical Safe transaction digest where available. |
@@ -33,6 +33,7 @@ Events are append-only. Corrections are new events that reference the superseded
 | `proposal.created` | `rawTransaction`, `declaredMetadata` | Proposal received. Declared metadata is untrusted input. |
 | `decode.started` | `decoderVersion` | Independent decoding began. |
 | `decode.completed` | `decodeStatus`, `intent`, `intentHash`, `targetCodeHash` | Decoder result. `decodeStatus` is `SUPPORTED` or `UNSUPPORTED`. |
+| `policy.evaluated` | `decision`, `policyClass`, `reasonCode`, `policyHash` | Deterministic backend policy result; it does not imply verifier quorum. |
 | `verifier.responded` | `verifierId`, `result`, `decision`, `reasonCode` | One verifier's result. `result` is `ATTESTED`, `REFUSED`, or `ERROR`; no event may imply threshold from one response. |
 | `attestation.threshold_met` | `threshold`, `validSignerCount`, `attestationId` | Distinct valid verifier signatures reached configured threshold. |
 | `timelock.scheduled` | `readyAt`, `delaySeconds` | Exact digest scheduled; includes chain transaction reference when real. |

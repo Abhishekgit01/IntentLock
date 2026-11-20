@@ -2,13 +2,13 @@
 
 ## 1. Planning assumptions
 
-This plan assumes the selected project is B1 IntentLock, the current workspace has no implementation code yet, and the project owner is responsible for the complete UI/Figma implementation. The team has 3+ people and Solidity capability varies; assign a capable contract owner and a separate reviewer before implementation. It is ordered by dependency and risk, not calendar duration. The original brief's hour-12 fallback is preserved as an event-time gate.
+This plan assumes the selected project is B1 IntentLock, the first local backend/API slice is in place, the Safe contracts and execution adapter are not implemented yet, and the project owner is responsible for the complete UI/Figma implementation. The team has 3+ people and Solidity capability varies; assign a capable contract owner and a separate reviewer before contract implementation. It is ordered by dependency and risk, not calendar duration. The original brief's hour-12 fallback is preserved as an event-time gate.
 
 ## 2. Build sequence and exit criteria
 
 ### Phase 0 — Assign owners and prepare setup
 
-Record the already selected defaults in [DECISIONS.md](DECISIONS.md): Safe 1.4.1, registry pre-submission, `nonce - 1` at the guard hook, canonical intent encoding, decision enum, strict proxy resolver behavior, no modules, unconditional delegatecall rejection, and one timelocked nonzero guard replacement. Confirm named owners and exact dependency versions before implementation.
+Record the already selected defaults in [DECISIONS.md](DECISIONS.md): Safe 1.4.1, registry pre-submission, `nonce - 1` at the guard hook, canonical intent encoding, decision enum, strict proxy resolver behavior, no modules, unconditional delegatecall rejection, and one timelocked nonzero guard replacement. Confirm named owners, Solidity compiler/Foundry pins, and exact versions for the existing UI before integrating it. Backend Node/Fastify/viem pins are in `backend/package.json` and require clean-install confirmation.
 
 **Exit:** digest and intent test vectors exist; dependencies are pinned; no unresolved choice affects contract interfaces.
 

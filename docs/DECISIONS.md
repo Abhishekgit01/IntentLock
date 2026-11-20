@@ -30,10 +30,11 @@ The team has 3+ people and Solidity capability varies. Assign named owners at ki
 | D-022 | Safe dependency pin | Floating package; tag + resolved revision | **Use immutable v1.4.1 source/tag and record resolved revision — locked** | Build owner | Before dependency install |
 | D-023 | Solidity compiler | Single compiler; auto-select multiple | **Safe dependency builds with the release compiler; IntentLock compiler pin recorded separately in config/lockfile — pending exact repo setup** | Contracts lead | Before first compile |
 | D-024 | Foundry version | Floating stable; fixed toolchain release | **Exact Foundry release/commit in toolchain file — pending environment selection** | Build owner | Before first Forge run |
-| D-025 | Node and viem versions | Floating semver; exact patches | **Exact Node patch and viem package version with committed lockfile — pending first clean install** | App/integration owner | Before API/client integration |
+| D-025 | Node and viem versions | Floating semver; exact patches | **Backend pins Node 24.22.1, Fastify 5.12.8, viem 2.58.0, npm 11.19.1 — selected; clean install and lockfile validation pending. Frontend pins remain owned by the existing UI scaffold** | App/integration owner | Before API/UI integration is called reproducible |
 | D-026 | Fixture suite size | All candidates; arbitrary cuts; critical set + target 40 | **25 specified critical fixtures, 15 recommended; exact 40-entry catalog — locked** | Evidence owner | Before first report generation |
 | D-027 | Team assignments | Role-only; named responsibilities | **3+ people, Solidity capability varies — assign capable author and second human reviewer by name** | Project lead | Kickoff / before contract code |
 | D-028 | Visual palette / Figma direction | Define here; owner-managed Figma | **Out of scope for this repo spec — project owner decides and documents in Figma** | Project owner | No code-spec deadline |
+| D-029 | Canonical intent and policy hash encoding | Canonical JSON hash; EIP-712 typed intent; ad hoc ABI packing | **EIP-712 `IntentV1` / `IntentAction` with the `IntentLockIntent` domain; policy hash is the typed ABI commitment to the sorted native recipient set and cap — locked in PROTOCOL.md** | Protocol + contracts leads | Share known-answer vectors before attestation signatures are used |
 
 ## Safe source verification
 
