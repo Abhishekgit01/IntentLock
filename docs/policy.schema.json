@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intentlock.local/schemas/policy.schema.json",
+  "title": "IntentLock PolicyV1 authoring file",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "native", "erc20"],
+  "properties": {
+    "schema": { "const": "intentlock.policy.v1" },
+    "schemaVersion": { "const": 1 },
+    "native": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxTransferWei", "allowedRecipients"],
+      "properties": {
+        "maxTransferWei": { "$ref": "#/$defs/uint256" },
+        "allowedRecipients": { "$ref": "#/$defs/addresses" }
+      }
+    },
+    "erc20": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxTransferBaseUnits", "allowedRecipients", "tokens"],
+      "properties": {
+        "maxTransferBaseUnits": { "$ref": "#/$defs/uint256" },
+        "allowedRecipients": { "$ref": "#/$defs/addresses" },
+        "tokens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["address", "runtimeCodeHash"],
+            "properties": {
+              "address": { "$ref": "#/$defs/address" },
+              "runtimeCodeHash": { "$ref": "#/$defs/bytes32" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "uint256": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "bytes32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "addresses": { "type": "array", "items": { "$ref": "#/$defs/address" } }
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "$schema": "./results.schema.json",
+  "schemaVersion": 1,
+  "runId": "synthetic-smoke-001",
+  "source": "synthetic",
+  "commit": null,
+  "timestamp": "2026-11-20T12:00:00Z",
+  "environment": {
+    "description": "Synthetic demonstration dataset exercising validation logic, success, refusals, reverts, unattempted fixtures, and missing catalog coverage."
+  },
+  "results": [
+    {
+      "fixtureId": "B01",
+      "decision": "ATTEST",
+      "workflowStatus": "EXECUTED",
+      "attemptedOnchain": true,
+      "observedRevert": null,
+      "executionSucceeded": true,
+      "stateAssertionsPassed": true,
+      "artifactRefs": [
+        "artifacts/synthetic/b01-receipt.json"
+      ]
+    },
+    {
+      "fixtureId": "P01",
+      "decision": "REFUSE_POLICY",
+      "workflowStatus": "REJECTED",
+      "attemptedOnchain": false,
+      "observedRevert": null,
+      "executionSucceeded": false,
+      "stateAssertionsPassed": true,
+      "artifactRefs": [
+        "artifacts/synthetic/p01-decision.json"
+      ]
+    },
+    {
+      "fixtureId": "D01",
+      "decision": "REFUSE_UNSUPPORTED",
+      "workflowStatus": "QUARANTINED",
+      "attemptedOnchain": false,
+      "observedRevert": null,
+      "executionSucceeded": false,
+      "stateAssertionsPassed": true,
+      "artifactRefs": [
+        "artifacts/synthetic/d01-quarantine.json"
+      ]
+    },
+    {
+      "fixtureId": "A01",
+      "decision": "REFUSE_POLICY",
+      "workflowStatus": "EXECUTION_FAILED",
+      "attemptedOnchain": true,
+      "observedRevert": "UnsupportedOperation",
+      "executionSucceeded": false,
+      "stateAssertionsPassed": true,
+      "artifactRefs": [
+        "artifacts/synthetic/a01-guard-revert.json"
+      ]
+    },
+    {
+      "fixtureId": "A20",
+      "decision": "ATTEST",
+      "workflowStatus": "EXECUTION_FAILED",
+      "attemptedOnchain": true,
+      "observedRevert": "NoAttestation",
+      "executionSucceeded": false,
+      "stateAssertionsPassed": true,
+      "artifactRefs": [
+        "artifacts/synthetic/a20-missing-attestation.json"
+      ]
+    },
+    {
+      "fixtureId": "A15",
+      "decision": "ATTEST",
+      "workflowStatus": "AWAITING_THRESHOLD",
+      "attemptedOnchain": false,
+      "observedRevert": null,
+      "executionSucceeded": false,
+      "stateAssertionsPassed": true,
+      "artifactRefs": []
+    }
+  ]
+}

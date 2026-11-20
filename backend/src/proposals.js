@@ -1,7 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import { isAddress, isHex } from 'viem';
 import { assertSafeReady, getCanonicalSafeTxHash, SAFE_ABI } from './safe.js';
-import { computePolicyHash, decodeAndDecide } from './policy.js';
+import {
+  computePolicyHash,
+  decodeAndDecide,
+  DECODER_VERSION,
+} from './policy.js';
 import { appendEvent } from './events.js';
 
 const UINT256_MAX = (1n << 256n) - 1n;
@@ -201,6 +205,52 @@ export function createProposalService({ client, config, store }) {
 
   return {
     policyHash,
+    async decodeRaw(rawTransaction) {
+      const transaction = validateTransaction({ transaction: rawTransaction });
+      await assertSafeReady(
+        client,
+        config,
+        transaction.chainId,
+        transaction.safe,
+      );
+      const currentNonce = await client.readContract({
+        address: config.safeAddress,
+        abi: SAFE_ABI,
+        functionName: 'nonce',
+      });
+      if (currentNonce !== BigInt(transaction.safeNonce)) {
+        const error = new Error(
+          'Raw transaction Safe nonce is stale or does not match the live Safe nonce',
+        );
+        error.code = 'NONCE_STALE';
+        error.statusCode = 409;
+        throw error;
+      }
+      const safeTxHash = await getCanonicalSafeTxHash(
+        client,
+        config.safeAddress,
+        transaction,
+      );
+      const decoded = await decodeAndDecide({
+        client,
+        config,
+        transaction,
+        safeTxHash,
+        policyHash,
+      });
+      return {
+        decision: decoded.decision,
+        decodeStatus: decoded.decodeStatus,
+        reasonCode: decoded.reasonCode,
+        intent: decoded.intent,
+        intentHash: decoded.intentHash,
+        safeTxHash,
+        policyHash: policyHash ?? null,
+        decoderVersion: DECODER_VERSION,
+        source: decoded.source,
+        signingPerformed: false,
+      };
+    },
     getPublicProposal(proposalId) {
       const proposal = store.proposals.get(proposalId);
       return proposal ? toPublicProposal(proposal, config) : undefined;

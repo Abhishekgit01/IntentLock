@@ -1,6 +1,5 @@
 import {
   decodeFunctionData,
-  encodeAbiParameters,
   encodeFunctionData,
   hashTypedData,
   keccak256,
@@ -9,12 +8,9 @@ import {
   zeroAddress,
   zeroHash,
 } from 'viem';
+import { compilePolicyFile } from './policy-format.js';
 
-const POLICY_TYPEHASH = keccak256(
-  stringToHex(
-    'PolicyV1(uint32 schemaVersion,uint256 maxNativeTransferWei,bytes32 nativeRecipientSetHash,bytes32 erc20TokenMapHash,bytes32 erc20RecipientSetHash,uint256 maxErc20TransferBaseUnits)',
-  ),
-);
+export const DECODER_VERSION = 'native-erc20-transfer-v1';
 
 const ERC20_ABI = parseAbi([
   'function transfer(address to,uint256 amount) returns (bool)',
@@ -23,6 +19,17 @@ const ERC20_ABI = parseAbi([
 const ERC20_TRANSFER_SELECTOR = '0xa9059cbb';
 const ERC20_APPROVE_SELECTOR = '0x095ea7b3';
 const UINT256_MAX = (1n << 256n) - 1n;
+const SAFE_ADMIN_SELECTORS = new Set([
+  '0xe19a9dd9', // setGuard(address)
+  '0x610b5925', // enableModule(address)
+  '0xe009cfde', // disableModule(address,address)
+  '0x694e80c3', // changeThreshold(uint256)
+  '0x0d582f13', // addOwnerWithThreshold(address,uint256)
+  '0xf8dc5dd9', // removeOwner(address,address,uint256)
+  '0xe318b52b', // swapOwner(address,address,address)
+  '0xf08a0323', // setFallbackHandler(address)
+  '0x7de7edef', // changeMasterCopy(address)
+]);
 
 export const INTENT_TYPES = {
   IntentAction: [
@@ -47,65 +54,24 @@ export const INTENT_TYPES = {
   ],
 };
 
-function sortedAddressList(addresses) {
-  return [...addresses].map((address) => address.toLowerCase()).sort();
-}
-
 export function computePolicyHash(config) {
-  if (
-    config.maxNativeTransferWei === undefined ||
-    config.nativeRecipients.length === 0
-  ) {
-    return undefined;
-  }
-
-  const nativeRecipientSetHash = keccak256(
-    encodeAbiParameters(
-      [{ type: 'address[]' }],
-      [sortedAddressList(config.nativeRecipients)],
-    ),
-  );
-  const erc20RecipientSetHash = keccak256(
-    encodeAbiParameters(
-      [{ type: 'address[]' }],
-      [sortedAddressList(config.erc20Recipients)],
-    ),
-  );
-  const erc20TokenMap = [...config.erc20Tokens].sort((left, right) =>
-    left.address.toLowerCase().localeCompare(right.address.toLowerCase()),
-  );
-  const erc20TokenMapHash = keccak256(
-    encodeAbiParameters(
-      [{ type: 'address[]' }, { type: 'bytes32[]' }],
-      [
-        erc20TokenMap.map(({ address }) => address.toLowerCase()),
-        erc20TokenMap.map(({ codeHash }) => codeHash.toLowerCase()),
-      ],
-    ),
-  );
-
-  return keccak256(
-    encodeAbiParameters(
-      [
-        { type: 'bytes32' },
-        { type: 'uint32' },
-        { type: 'uint256' },
-        { type: 'bytes32' },
-        { type: 'bytes32' },
-        { type: 'bytes32' },
-        { type: 'uint256' },
-      ],
-      [
-        POLICY_TYPEHASH,
-        1,
-        config.maxNativeTransferWei,
-        nativeRecipientSetHash,
-        erc20TokenMapHash,
-        erc20RecipientSetHash,
-        config.maxErc20TransferBaseUnits ?? 0n,
-      ],
-    ),
-  );
+  if (config.maxNativeTransferWei === undefined) return undefined;
+  return compilePolicyFile({
+    schema: 'intentlock.policy.v1',
+    schemaVersion: 1,
+    native: {
+      maxTransferWei: config.maxNativeTransferWei.toString(),
+      allowedRecipients: config.nativeRecipients,
+    },
+    erc20: {
+      maxTransferBaseUnits: (config.maxErc20TransferBaseUnits ?? 0n).toString(),
+      allowedRecipients: config.erc20Recipients,
+      tokens: config.erc20Tokens.map(({ address, codeHash }) => ({
+        address,
+        runtimeCodeHash: codeHash,
+      })),
+    },
+  }).policyHash;
 }
 
 function buildIntent({
@@ -527,6 +493,23 @@ export async function decodeAndDecide({
       policyClass: 255,
       reasonCode: 'UNSUPPORTED_OPERATION',
       summary: 'Only CALL operations are supported by the decoder.',
+      targetCodeHash,
+      source,
+    });
+  }
+
+  if (
+    transaction.to.toLowerCase() === transaction.safe.toLowerCase() &&
+    transaction.data.length >= 10 &&
+    SAFE_ADMIN_SELECTORS.has(transaction.data.slice(0, 10).toLowerCase())
+  ) {
+    return refusal({
+      decodeStatus: 'SUPPORTED',
+      decision: 'REFUSE_POLICY',
+      workflowStatus: 'REJECTED',
+      policyClass: 10,
+      reasonCode: 'SAFE_ADMIN_CHANGE_DENIED',
+      summary: 'Safe administrative changes are refused by the initial policy.',
       targetCodeHash,
       source,
     });

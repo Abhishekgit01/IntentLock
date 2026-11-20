@@ -171,6 +171,10 @@ export function loadConfig(env = process.env) {
     rpcUrl: env.RPC_URL ?? DEFAULTS.rpcUrl,
     safeVersion,
     safeAddress: readOptionalAddress('SAFE_ADDRESS', env.SAFE_ADDRESS),
+    verifierSignerAddress: readOptionalAddress(
+      'VERIFIER_SIGNER_ADDRESS',
+      env.VERIFIER_SIGNER_ADDRESS,
+    ),
     registryAddress: readOptionalAddress(
       'REGISTRY_ADDRESS',
       env.REGISTRY_ADDRESS,

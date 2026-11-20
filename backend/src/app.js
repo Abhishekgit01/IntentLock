@@ -5,6 +5,8 @@ import { assertSafeReady, createChainClient, SAFE_ABI } from './safe.js';
 import { createProposalService, serializeProposal } from './proposals.js';
 import { addAttestation } from './attestations.js';
 import { subscribe } from './events.js';
+import { compilePolicyFile, lintPolicyDraft } from './policy-format.js';
+import { DECODER_VERSION } from './policy.js';
 
 function apiError(statusCode, code, message) {
   const error = new Error(message);
@@ -80,6 +82,17 @@ export function buildApp(config) {
   });
 
   app.get('/health', async (_request, reply) => {
+    const publicVerifierInfo = {
+      signerAddress: config.verifierSignerAddress ?? null,
+      policyHash: proposalService.policyHash ?? null,
+      decoderVersion: DECODER_VERSION,
+      safeAddress: config.safeAddress ?? null,
+      safeNonce: null,
+      nativeRecipients: config.nativeRecipients,
+      maxNativeTransferWei: config.maxNativeTransferWei?.toString() ?? null,
+      erc20Recipients: config.erc20Recipients,
+      erc20Tokens: config.erc20Tokens,
+    };
     try {
       const chainId = await client.getChainId();
       const rpcReady = chainId === config.chainId;
@@ -93,6 +106,13 @@ export function buildApp(config) {
             config.safeAddress,
           );
           safeReady = true;
+          publicVerifierInfo.safeNonce = (
+            await client.readContract({
+              address: config.safeAddress,
+              abi: SAFE_ABI,
+              functionName: 'nonce',
+            })
+          ).toString();
         } catch {
           safeReady = false;
         }
@@ -101,6 +121,7 @@ export function buildApp(config) {
       const status =
         rpcReady && safeReady && policyReady ? 'ready' : 'degraded';
       return reply.code(status === 'ready' ? 200 : 503).send({
+        ...publicVerifierInfo,
         status,
         api: 'ok',
         rpc: rpcReady ? 'connected' : 'chain_mismatch',
@@ -113,6 +134,7 @@ export function buildApp(config) {
       });
     } catch {
       return reply.code(503).send({
+        ...publicVerifierInfo,
         status: 'unavailable',
         api: 'ok',
         rpc: 'unavailable',
@@ -123,6 +145,16 @@ export function buildApp(config) {
       });
     }
   });
+
+  app.post('/v1/policy/compile', async (request) =>
+    compilePolicyFile(request.body),
+  );
+
+  app.post('/v1/policy/lint', async (request) => ({
+    issues: lintPolicyDraft(request.body),
+  }));
+
+  app.post('/decode', async (request) => proposalService.decodeRaw(request.body));
 
   app.get('/v1/config', async () => proposalService.getConfigView());
 

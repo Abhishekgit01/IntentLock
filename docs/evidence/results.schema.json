@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intentlock.local/schemas/results.schema.json",
+  "title": "IntentLock execution results",
+  "description": "Schema for machine-readable actual execution and verification run results.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "source",
+    "results"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional path or URI identifying the schema used to validate this document."
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "synthetic",
+        "local-chain",
+        "ci",
+        "manual",
+        "unit-test"
+      ]
+    },
+    "commit": {
+      "type": ["string", "null"]
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fixtureResult"
+      }
+    }
+  },
+  "$defs": {
+    "fixtureResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixtureId",
+        "decision",
+        "workflowStatus",
+        "attemptedOnchain",
+        "observedRevert",
+        "executionSucceeded",
+        "stateAssertionsPassed",
+        "artifactRefs"
+      ],
+      "properties": {
+        "fixtureId": {
+          "type": "string",
+          "pattern": "^(B|A|D|P|H|F)[0-9]{2}$"
+        },
+        "decision": {
+          "enum": [
+            "ATTEST",
+            "ATTEST_WITH_TIMELOCK",
+            "REFUSE_UNSUPPORTED",
+            "REFUSE_POLICY"
+          ]
+        },
+        "workflowStatus": {
+          "enum": [
+            "AWAITING_THRESHOLD",
+            "APPROVED",
+            "TIMELOCK_PENDING",
+            "TIMELOCK_READY",
+            "QUARANTINED",
+            "REJECTED",
+            "EXECUTION_FAILED",
+            "EXECUTED",
+            "CANCELLED",
+            "EXPIRED"
+          ]
+        },
+        "attemptedOnchain": {
+          "type": "boolean"
+        },
+        "observedRevert": {
+          "type": ["string", "null"],
+          "enum": [
+            "NoAttestation",
+            "WrongSafe",
+            "WrongChain",
+            "WrongNonce",
+            "DigestMismatch",
+            "IntentMismatch",
+            "ThresholdNotMet",
+            "Expired",
+            "AlreadyConsumed",
+            "PolicyDenied",
+            "TimelockNotReady",
+            "TimelockCancelled",
+            "UnsupportedOperation",
+            "TargetCodeHashMismatch",
+            "ImplementationMismatch",
+            "WrongPolicyClass",
+            "RegistryUnavailable",
+            "OnlyGuard",
+            "InvalidSignature",
+            "InvalidVerifierSet",
+            "GS104",
+            null
+          ]
+        },
+        "executionSucceeded": {
+          "type": "boolean"
+        },
+        "stateAssertionsPassed": {
+          "type": "boolean"
+        },
+        "artifactRefs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "attemptedOnchain": { "const": false } },
+            "required": ["attemptedOnchain"]
+          },
+          "then": {
+            "properties": {
+              "observedRevert": { "type": "null" },
+              "executionSucceeded": { "const": false }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "executionSucceeded": { "const": true } },
+            "required": ["executionSucceeded"]
+          },
+          "then": {
+            "properties": {
+              "attemptedOnchain": { "const": true },
+              "observedRevert": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "observedRevert": { "type": "string" } },
+            "required": ["observedRevert"]
+          },
+          "then": {
+            "properties": {
+              "attemptedOnchain": { "const": true },
+              "executionSucceeded": { "const": false }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
