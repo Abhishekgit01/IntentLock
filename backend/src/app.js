@@ -4,6 +4,7 @@ import { keccak256 } from 'viem';
 import { assertSafeReady, createChainClient, SAFE_ABI } from './safe.js';
 import { createProposalService, serializeProposal } from './proposals.js';
 import { addAttestation } from './attestations.js';
+import { executeProposalOnchain } from './execution.js';
 import { subscribe } from './events.js';
 import { compilePolicyFile, lintPolicyDraft } from './policy-format.js';
 import { DECODER_VERSION } from './policy.js';
@@ -92,6 +93,7 @@ export function buildApp(config) {
       maxNativeTransferWei: config.maxNativeTransferWei?.toString() ?? null,
       erc20Recipients: config.erc20Recipients,
       erc20Tokens: config.erc20Tokens,
+      verifierAddresses: config.verifierAddresses,
     };
     try {
       const chainId = await client.getChainId();
@@ -129,8 +131,10 @@ export function buildApp(config) {
         observedChainId: chainId,
         safeConfigured: safeReady,
         policyConfigured: policyReady,
-        registrySubmissionAvailable: false,
-        executionAvailable: false,
+        registrySubmissionAvailable: Boolean(config.registryAddress),
+        executionAvailable: Boolean(
+          config.safeAddress && config.chainId === 31337,
+        ),
       });
     } catch {
       return reply.code(503).send({
@@ -154,7 +158,9 @@ export function buildApp(config) {
     issues: lintPolicyDraft(request.body),
   }));
 
-  app.post('/decode', async (request) => proposalService.decodeRaw(request.body));
+  app.post('/decode', async (request) =>
+    proposalService.decodeRaw(request.body),
+  );
 
   app.get('/v1/config', async () => proposalService.getConfigView());
 
@@ -277,11 +283,13 @@ export function buildApp(config) {
       threshold: result.threshold,
       thresholdMet: result.validSignerCount >= result.threshold,
       registrySubmission: 'NOT_SUBMITTED',
-      executionAvailable: false,
+      executionAvailable: Boolean(
+        config.safeAddress && config.chainId === 31337,
+      ),
     });
   });
 
-  app.post('/v1/proposals/:proposalId/execute', async (request) => {
+  app.post('/v1/proposals/:proposalId/execute', async (request, reply) => {
     const proposal = proposalService.getInternalProposal(
       request.params.proposalId,
     );
@@ -291,28 +299,8 @@ export function buildApp(config) {
         'PROPOSAL_NOT_FOUND',
         'Proposal was not found in this backend process',
       );
-    if (
-      proposal.decoded.decision !== 'ATTEST' &&
-      proposal.decoded.decision !== 'ATTEST_WITH_TIMELOCK'
-    ) {
-      throw apiError(
-        409,
-        'POLICY_DENIED',
-        'Proposal was refused and cannot be executed',
-      );
-    }
-    if (proposal.attestations.size < config.verifierThreshold) {
-      throw apiError(
-        409,
-        'THRESHOLD_NOT_MET',
-        'Verifier threshold has not been reached',
-      );
-    }
-    throw apiError(
-      501,
-      'EXECUTION_ADAPTER_NOT_CONFIGURED',
-      'On-chain registry submission and Safe execution are not implemented yet',
-    );
+    const result = await executeProposalOnchain({ client, config, proposal });
+    return reply.code(result.success ? 200 : 409).send(result);
   });
 
   app.get('/v1/proposals/:proposalId/events', async (request, reply) => {

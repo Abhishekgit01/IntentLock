@@ -1,0 +1,1312 @@
+{
+  "schemaVersion": 1,
+  "reportGeneratedAt": "2026-11-20T13:13:36.491864+00:00",
+  "runId": "local-anvil-run-001",
+  "source": "local-chain",
+  "isSynthetic": false,
+  "commit": "15ef91f",
+  "environment": {
+    "chain": "local Anvil / Foundry",
+    "chainId": 31337,
+    "forgeVersion": "1.10.0 (commit 083e2299)",
+    "solcVersion": "0.8.28",
+    "safeVersion": "1.4.1"
+  },
+  "summary": {
+    "catalogTotal": 42,
+    "reportedTotal": 42,
+    "missingTotal": 0,
+    "passedTotal": 42,
+    "failedTotal": 0,
+    "criticalCoverage": {
+      "catalogTotal": 25,
+      "reported": 25,
+      "passed": 25,
+      "failed": 0,
+      "missing": 0
+    }
+  },
+  "countsByKind": {
+    "benign": {
+      "catalogTotal": 7,
+      "reported": 7,
+      "passed": 7,
+      "failed": 0,
+      "missing": 0
+    },
+    "attack": {
+      "catalogTotal": 29,
+      "reported": 29,
+      "passed": 29,
+      "failed": 0,
+      "missing": 0
+    },
+    "unknown": {
+      "catalogTotal": 5,
+      "reported": 5,
+      "passed": 5,
+      "failed": 0,
+      "missing": 0
+    },
+    "availability": {
+      "catalogTotal": 1,
+      "reported": 1,
+      "passed": 1,
+      "failed": 0,
+      "missing": 0
+    }
+  },
+  "countsByDecision": {
+    "ATTEST": 22,
+    "ATTEST_WITH_TIMELOCK": 3,
+    "REFUSE_POLICY": 12,
+    "REFUSE_UNSUPPORTED": 5
+  },
+  "countsByExecutionCategory": {
+    "successful_receipt": 7,
+    "policy_refusal": 10,
+    "insufficient_threshold": 4,
+    "observed_guard_safe_revert": 21,
+    "unattempted": 0,
+    "not_run_missing": 0
+  },
+  "observedReverts": {
+    "UnsupportedOperation": 2,
+    "DigestMismatch": 3,
+    "WrongSafe": 1,
+    "WrongChain": 1,
+    "Expired": 1,
+    "NoAttestation": 2,
+    "ImplementationMismatch": 1,
+    "PolicyDenied": 5,
+    "TimelockNotReady": 1,
+    "GS104": 1,
+    "RegistryUnavailable": 1,
+    "TargetCodeHashMismatch": 1,
+    "TimelockCancelled": 1,
+    "OnlyGuard": 1,
+    "PQVerificationFailed": 1
+  },
+  "fixtures": [
+    {
+      "fixtureId": "B01",
+      "critical": true,
+      "kind": "benign",
+      "category": "benign",
+      "title": "Allowlisted native transfer under cap",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeds": true,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeded": true,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "run.json",
+          "docs/fixtures/catalog.json#B01"
+        ]
+      },
+      "executionCategory": "successful_receipt"
+    },
+    {
+      "fixtureId": "B03",
+      "critical": true,
+      "kind": "benign",
+      "category": "benign",
+      "title": "Allowlisted ERC-20 transfer",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeds": true,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeded": true,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "run.json",
+          "docs/fixtures/catalog.json#B03"
+        ]
+      },
+      "executionCategory": "successful_receipt"
+    },
+    {
+      "fixtureId": "B04",
+      "critical": false,
+      "kind": "benign",
+      "category": "benign",
+      "title": "Bounded token approval",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeds": true,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeded": true,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "run.json",
+          "docs/fixtures/catalog.json#B04"
+        ]
+      },
+      "executionCategory": "successful_receipt"
+    },
+    {
+      "fixtureId": "B06",
+      "critical": true,
+      "kind": "benign",
+      "category": "benign",
+      "title": "Exact 2-of-3 verifier threshold",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeds": true,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeded": true,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "run.json",
+          "docs/fixtures/catalog.json#B06"
+        ]
+      },
+      "executionCategory": "successful_receipt"
+    },
+    {
+      "fixtureId": "A01",
+      "critical": true,
+      "kind": "attack",
+      "category": "deception",
+      "title": "Misleading label over delegatecall payload",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "UnsupportedOperation"
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "UnsupportedOperation",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A01"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "A02",
+      "critical": true,
+      "kind": "attack",
+      "category": "deception",
+      "title": "Proposal label conflicts with raw CALL semantics",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A02"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "A03",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Destination mutated after signing",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "DigestMismatch"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "DigestMismatch",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A03"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "A04",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Value mutated after signing",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "DigestMismatch"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "DigestMismatch",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A04"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "A05",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Calldata mutated after signing",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "DigestMismatch"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "DigestMismatch",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A05"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "A06",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Operation changed from CALL to DELEGATECALL",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "UnsupportedOperation"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "UnsupportedOperation",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A06"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "A07",
+      "critical": true,
+      "kind": "benign",
+      "category": "attestation",
+      "title": "Pre-increment nonce binding",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeds": true,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeded": true,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "run.json",
+          "docs/fixtures/catalog.json#A07"
+        ]
+      },
+      "executionCategory": "successful_receipt"
+    },
+    {
+      "fixtureId": "A08",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Wrong Safe replay",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "WrongSafe"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "WrongSafe",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A08"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "A09",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Wrong chain replay",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "WrongChain"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "WrongChain",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A09"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "A13",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Expired verifier signatures",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "Expired"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "Expired",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A13"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "A15",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Only one verifier signature",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "AWAITING_THRESHOLD",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "AWAITING_THRESHOLD",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A15"
+        ]
+      },
+      "executionCategory": "insufficient_threshold"
+    },
+    {
+      "fixtureId": "A16",
+      "critical": true,
+      "kind": "attack",
+      "category": "attestation",
+      "title": "Duplicate signer cannot satisfy threshold",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "AWAITING_THRESHOLD",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "AWAITING_THRESHOLD",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A16"
+        ]
+      },
+      "executionCategory": "insufficient_threshold"
+    },
+    {
+      "fixtureId": "A19",
+      "critical": true,
+      "kind": "attack",
+      "category": "replay",
+      "title": "Consumed digest replay",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "NoAttestation"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "NoAttestation",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A19"
+        ]
+      },
+      "executionCategory": "insufficient_threshold"
+    },
+    {
+      "fixtureId": "D01",
+      "critical": true,
+      "kind": "unknown",
+      "category": "decoder",
+      "title": "Unknown selector",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#D01"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "D02",
+      "critical": true,
+      "kind": "unknown",
+      "category": "decoder",
+      "title": "Malformed short calldata",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#D02"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "D03",
+      "critical": false,
+      "kind": "unknown",
+      "category": "decoder",
+      "title": "Trailing ambiguous calldata bytes",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#D03"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "D04",
+      "critical": false,
+      "kind": "unknown",
+      "category": "decoder",
+      "title": "Contract interaction target has no code",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#D04"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "D05",
+      "critical": false,
+      "kind": "attack",
+      "category": "decoder",
+      "title": "Proxy implementation changes after review",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "ImplementationMismatch"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "ImplementationMismatch",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#D05"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "P01",
+      "critical": true,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Unlimited ERC-20 approval",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#P01"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "P02",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "NFT operator approval",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#P02"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "P03",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Transfer to non-allowlisted recipient",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#P03"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "P04",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Transfer exceeds configured amount cap",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "REJECTED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#P04"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "P05",
+      "critical": false,
+      "kind": "unknown",
+      "category": "policy",
+      "title": "Unsupported permit authorization",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeds": false,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "REFUSE_UNSUPPORTED",
+        "workflowStatus": "QUARANTINED",
+        "attemptedOnchain": false,
+        "executionSucceeded": false,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#P05"
+        ]
+      },
+      "executionCategory": "policy_refusal"
+    },
+    {
+      "fixtureId": "H01",
+      "critical": true,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to remove guard",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "PolicyDenied"
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "PolicyDenied",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#H01"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "H02",
+      "critical": true,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to enable module",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "PolicyDenied"
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "PolicyDenied",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#H02"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "H03",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to disable module",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "PolicyDenied"
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "PolicyDenied",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#H03"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "H04",
+      "critical": true,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to change Safe implementation",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "PolicyDenied"
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "PolicyDenied",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#H04"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "H05",
+      "critical": false,
+      "kind": "attack",
+      "category": "policy",
+      "title": "Attempt to change owner threshold",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "PolicyDenied"
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "PolicyDenied",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#H05"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "H06",
+      "critical": true,
+      "kind": "attack",
+      "category": "timelock",
+      "title": "Execute guard replacement before readyAt",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST_WITH_TIMELOCK",
+        "workflowStatus": "TIMELOCK_PENDING",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "TimelockNotReady"
+      },
+      "actual": {
+        "decision": "ATTEST_WITH_TIMELOCK",
+        "workflowStatus": "TIMELOCK_PENDING",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "TimelockNotReady",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#H06"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "H08",
+      "critical": true,
+      "kind": "attack",
+      "category": "integration",
+      "title": "Safe module execution route",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "GS104"
+      },
+      "actual": {
+        "decision": "REFUSE_POLICY",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "GS104",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#H08"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "F01",
+      "critical": true,
+      "kind": "availability",
+      "category": "availability",
+      "title": "Registry/RPC/verifier unavailable",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "RegistryUnavailable"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "RegistryUnavailable",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#F01"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "D06",
+      "critical": false,
+      "kind": "attack",
+      "category": "decoder",
+      "title": "Direct target runtime code hash changes after attestation",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "TargetCodeHashMismatch"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "TargetCodeHashMismatch",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#D06"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "H09",
+      "critical": false,
+      "kind": "benign",
+      "category": "timelock",
+      "title": "Execute allowlisted guard replacement after readyAt",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST_WITH_TIMELOCK",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeds": true,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "ATTEST_WITH_TIMELOCK",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeded": true,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "run.json",
+          "docs/fixtures/catalog.json#H09"
+        ]
+      },
+      "executionCategory": "successful_receipt"
+    },
+    {
+      "fixtureId": "H10",
+      "critical": false,
+      "kind": "attack",
+      "category": "timelock",
+      "title": "Cancelled guard replacement cannot execute",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST_WITH_TIMELOCK",
+        "workflowStatus": "CANCELLED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "TimelockCancelled"
+      },
+      "actual": {
+        "decision": "ATTEST_WITH_TIMELOCK",
+        "workflowStatus": "CANCELLED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "TimelockCancelled",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#H10"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "H11",
+      "critical": false,
+      "kind": "attack",
+      "category": "integration",
+      "title": "Untrusted caller cannot consume an attestation",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "OnlyGuard"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "OnlyGuard",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#H11"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "A20",
+      "critical": false,
+      "kind": "attack",
+      "category": "deception",
+      "title": "Supported CALL with zero verifier attestations",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "NoAttestation"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "NoAttestation",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#A20"
+        ]
+      },
+      "executionCategory": "insufficient_threshold"
+    },
+    {
+      "fixtureId": "Q01",
+      "critical": false,
+      "kind": "attack",
+      "category": "pq",
+      "title": "PQ hybrid mode: attacker holds ECDSA keys but no PQ keys",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeds": false,
+        "expectedRevert": "PQVerificationFailed"
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTION_FAILED",
+        "attemptedOnchain": true,
+        "executionSucceeded": false,
+        "observedRevert": "PQVerificationFailed",
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "test/IntentLockSlice.t.sol",
+          "docs/fixtures/catalog.json#Q01"
+        ]
+      },
+      "executionCategory": "observed_guard_safe_revert"
+    },
+    {
+      "fixtureId": "Q02",
+      "critical": false,
+      "kind": "benign",
+      "category": "pq",
+      "title": "PQ hybrid mode: valid hybrid ECDSA and PQ signatures execute",
+      "passed": true,
+      "mismatches": [],
+      "expected": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeds": true,
+        "expectedRevert": null
+      },
+      "actual": {
+        "decision": "ATTEST",
+        "workflowStatus": "EXECUTED",
+        "attemptedOnchain": true,
+        "executionSucceeded": true,
+        "observedRevert": null,
+        "stateAssertionsPassed": true,
+        "artifactRefs": [
+          "run.json",
+          "docs/fixtures/catalog.json#Q02"
+        ]
+      },
+      "executionCategory": "successful_receipt"
+    }
+  ],
+  "missingFixtures": [],
+  "failures": []
+}

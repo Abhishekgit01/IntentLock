@@ -423,8 +423,10 @@ export function createProposalService({ client, config, store }) {
         verifierThreshold: config.verifierThreshold,
         supportedActions: ['native.transfer', 'erc20.transfer'],
         registryConfigured: Boolean(config.registryAddress),
-        registrySubmissionAvailable: false,
-        safeExecutionAvailable: false,
+        registrySubmissionAvailable: Boolean(config.registryAddress),
+        safeExecutionAvailable: Boolean(
+          config.safeAddress && config.chainId === 31337,
+        ),
         dataRetention: 'in-memory; cleared on process restart',
       };
     },

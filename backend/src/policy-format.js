@@ -112,7 +112,10 @@ export function normalizePolicyFile(input) {
     };
   });
   tokens.sort((left, right) => left.address.localeCompare(right.address));
-  if (new Set(tokens.map(({ address: tokenAddress }) => tokenAddress)).size !== tokens.length) {
+  if (
+    new Set(tokens.map(({ address: tokenAddress }) => tokenAddress)).size !==
+    tokens.length
+  ) {
     fail('erc20.tokens must not contain duplicate addresses');
   }
 
@@ -120,8 +123,14 @@ export function normalizePolicyFile(input) {
     schema: POLICY_SCHEMA,
     schemaVersion: 1,
     native: {
-      maxTransferWei: uint256(input.native.maxTransferWei, 'native.maxTransferWei').toString(),
-      allowedRecipients: addresses(input.native.allowedRecipients, 'native.allowedRecipients'),
+      maxTransferWei: uint256(
+        input.native.maxTransferWei,
+        'native.maxTransferWei',
+      ).toString(),
+      allowedRecipients: addresses(
+        input.native.allowedRecipients,
+        'native.allowedRecipients',
+      ),
     },
     erc20: {
       maxTransferBaseUnits: uint256(
@@ -192,43 +201,108 @@ export function compilePolicyFile(input) {
 export function lintPolicyDraft(input) {
   const issues = [];
   let policy;
+  if (!input?.native?.maxTransferWei) {
+    issues.push({
+      severity: 'error',
+      code: 'NATIVE_CAP_MISSING',
+      message: 'Native transfer cap is required.',
+    });
+  }
+  if (
+    Array.isArray(input?.erc20?.tokens) &&
+    input.erc20.tokens.length > 0 &&
+    !input.erc20.maxTransferBaseUnits
+  ) {
+    issues.push({
+      severity: 'error',
+      code: 'ERC20_CAP_MISSING',
+      message: 'ERC-20 transfer cap is required when tokens are configured.',
+    });
+  }
   try {
     const policyInput = { ...(input ?? {}) };
     delete policyInput.rules;
     policy = normalizePolicyFile(policyInput);
   } catch (error) {
-    issues.push({ severity: 'error', code: error.code ?? 'INVALID_POLICY', message: error.message });
+    issues.push({
+      severity: 'error',
+      code: error.code ?? 'INVALID_POLICY',
+      message: error.message,
+    });
   }
   if (policy && policy.erc20.tokens.length > 0) {
     if (policy.erc20.allowedRecipients.length === 0) {
-      issues.push({ severity: 'warning', code: 'ERC20_RECIPIENTS_EMPTY', message: 'ERC-20 transfers remain denied until a recipient is configured.' });
+      issues.push({
+        severity: 'warning',
+        code: 'ERC20_RECIPIENTS_EMPTY',
+        message:
+          'ERC-20 transfers remain denied until a recipient is configured.',
+      });
     }
     if (BigInt(policy.erc20.maxTransferBaseUnits) === 0n) {
-      issues.push({ severity: 'warning', code: 'ERC20_CAP_ZERO', message: 'ERC-20 transfers remain denied while the cap is zero.' });
+      issues.push({
+        severity: 'warning',
+        code: 'ERC20_CAP_ZERO',
+        message: 'ERC-20 transfers remain denied while the cap is zero.',
+      });
     }
+  }
+  if (policy && policy.native.allowedRecipients.length === 0) {
+    issues.push({
+      severity: 'warning',
+      code: 'NATIVE_RECIPIENTS_EMPTY',
+      message:
+        'Native transfers remain denied until a recipient is configured.',
+    });
   }
   const rules = Array.isArray(input?.rules) ? input.rules : [];
   const seen = new Map();
   for (const [index, rule] of rules.entries()) {
     if (!rule || typeof rule !== 'object' || Array.isArray(rule)) continue;
-    const key = [rule.action, rule.asset ?? '*', rule.recipient ?? '*'].join(':');
+    const key = [rule.action, rule.asset ?? '*', rule.recipient ?? '*'].join(
+      ':',
+    );
     if (seen.has(key) && seen.get(key) !== rule.decision) {
-      issues.push({ severity: 'error', code: 'CONFLICTING_RULES', message: `Rules ${seen.get(`${key}:id`)} and ${rule.id ?? index} conflict for ${key}.` });
+      issues.push({
+        severity: 'error',
+        code: 'CONFLICTING_RULES',
+        message: `Rules ${seen.get(`${key}:id`)} and ${rule.id ?? index} conflict for ${key}.`,
+      });
     } else {
       seen.set(key, rule.decision);
       seen.set(`${key}:id`, rule.id ?? index);
     }
     const action = String(rule.action ?? '').toLowerCase();
     const approval = action.includes('approval') || action.includes('approve');
-    const unlimited = rule.amount === 'unlimited' || rule.approvalLimit === 'unlimited';
-    if (approval && (unlimited || rule.decision === 'ATTEST' && !rule.maxBaseUnits)) {
-      issues.push({ severity: 'error', code: 'UNLIMITED_APPROVAL', message: `Rule ${rule.id ?? index} describes an unlimited or uncapped approval; v1 refuses approvals.` });
+    const unlimited =
+      rule.amount === 'unlimited' || rule.approvalLimit === 'unlimited';
+    if (
+      approval &&
+      rule.decision !== 'REFUSE_POLICY' &&
+      (unlimited || (rule.decision === 'ATTEST' && !rule.maxBaseUnits))
+    ) {
+      issues.push({
+        severity: 'error',
+        code: 'UNLIMITED_APPROVAL',
+        message: `Rule ${rule.id ?? index} describes an unlimited or uncapped approval; v1 refuses approvals.`,
+      });
     }
-    if ((rule.currency === 'USD' || rule.unit === 'USD') && !rule.fixedBaseUnits) {
-      issues.push({ severity: 'error', code: 'USD_WITHOUT_BASE_UNITS', message: `Rule ${rule.id ?? index} uses USD without fixed token base units.` });
+    if (
+      (rule.currency === 'USD' || rule.unit === 'USD') &&
+      !rule.fixedBaseUnits
+    ) {
+      issues.push({
+        severity: 'error',
+        code: 'USD_WITHOUT_BASE_UNITS',
+        message: `Rule ${rule.id ?? index} uses USD without fixed token base units.`,
+      });
     }
     if (approval && rule.maxBaseUnits === undefined && !unlimited) {
-      issues.push({ severity: 'warning', code: 'APPROVAL_CAP_MISSING', message: `Rule ${rule.id ?? index} has no approval cap.` });
+      issues.push({
+        severity: 'warning',
+        code: 'APPROVAL_CAP_MISSING',
+        message: `Rule ${rule.id ?? index} has no approval cap.`,
+      });
     }
   }
   return issues;

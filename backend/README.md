@@ -25,6 +25,10 @@ The server binds to `127.0.0.1:8787` by default. Browser origins must be listed 
 | `GET /health` | RPC, configured Safe, policy readiness, and unavailable execution adapters. Returns 503 while required local configuration is missing. |
 | `GET /v1/config` | Non-secret capability/configuration summary, Safe address, public policy allowlist, and verifier addresses for the UI. |
 | `GET /v1/context` | Current RPC block and Safe version/address/nonce/balance/code hash, installed guard, and enabled module count. State fields are read at the returned block. |
+| `GET /health` | Also reports the configured public verifier signer address, policy hash, and decoder version. It never returns key material. |
+| `POST /decode` | Verifier dry run over raw Safe transaction fields only. It returns the policy decision and canonical intent when supported; it never signs. Extra labels or metadata are rejected. |
+| `POST /v1/policy/compile` | Validates strict `intentlock.policy.v1` JSON and returns normalized policy JSON, canonical ABI bytes, and the registry-compatible policy hash. |
+| `POST /v1/policy/lint` | Reports policy draft issues such as uncapped/unlimited approvals, conflicting rules, missing caps, and USD amounts without fixed base units. |
 | `POST /v1/proposals` | Validates Safe transaction fields, chain, Safe address/version/nonce, computes `safeTxHash` from Safe 1.4.1, reads target code at a pinned block, decodes/policies supported cases, stores proposal, returns event URL. Client-supplied hashes are rejected. |
 | `GET /v1/proposals/:proposalId` | Returns normalized proposal, decode/policy result, verifier threshold progress, and execution gate. |
 | `GET /v1/proposals/:proposalId/events` | Replays events and follows updates through Server-Sent Events. `Last-Event-ID` is the event sequence. |
@@ -36,6 +40,8 @@ The decoder accepts native `CALL` transfers with empty calldata to an EOA and ca
 The `/workbench` page has a separate **Live backend** action. It refreshes `/v1/context`, submits the currently selected scenario's concrete Safe fields to `POST /v1/proposals`, and follows its Server-Sent Events stream. Safe hashes, decoded intent, policy decision, source block, and Safe state are real RPC/API results. These are not on-chain execution receipts: the story animation remains marked synthetic, the event stream has `source=api`, and registry submission/Safe execution remain unavailable.
 
 During local development, the frontend's Vite server proxies `/api/*` to `http://127.0.0.1:8787`. Set `VITE_INTENTLOCK_API_URL` to an API origin only when a deployment has a separately configured backend/CORS origin.
+
+The policy JSON shape is specified by [`docs/policy.schema.json`](../docs/policy.schema.json). The compiler normalizes and sorts addresses, then emits `keccak256(abi.encode(POLICY_TYPEHASH,1,...))`, matching the `PolicyV1` encoding in the protocol. Draft rule quotes and UI labels are not hashed. `npm run intentlock -- keygen` creates a verifier key file with owner-only permissions, prints only its public address and file path, and does not load the key into the server. `npm run intentlock -- conformance --endpoint http://127.0.0.1:8787` emits machine-readable policy-vector, decoder-vector, and catalog decision results. A verifier that does not expose Safe context from `/health` can be supplied `--safe`, `--chain-id`, `--nonce`, and `--recipient`. F01 is marked not applicable to a healthy decode endpoint. Catalog conformance checks representative policy decisions only; execution and guard-revert fixtures still require Foundry evidence.
 
 ## Proposal request
 

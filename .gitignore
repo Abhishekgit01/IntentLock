@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 !.env.*.example
+*.intentlock-key
 
 # JavaScript dependencies and generated builds
 node_modules/

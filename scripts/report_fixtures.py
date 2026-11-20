@@ -63,6 +63,7 @@ VALID_REVERTS = {
     "InvalidSignature",
     "InvalidVerifierSet",
     "GS104",
+    "PQVerificationFailed",
     None,
 }
 
@@ -96,7 +97,7 @@ RESULT_FIELDS = {
     "artifactRefs",
 }
 
-FIXTURE_ID_REGEX = re.compile(r"^(B|A|D|P|H|F)[0-9]{2}$")
+FIXTURE_ID_REGEX = re.compile(r"^(B|A|D|P|H|F|Q)[0-9]{2}$")
 
 
 class ValidationError(Exception):

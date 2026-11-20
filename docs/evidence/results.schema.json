@@ -68,7 +68,7 @@
       "properties": {
         "fixtureId": {
           "type": "string",
-          "pattern": "^(B|A|D|P|H|F)[0-9]{2}$"
+          "pattern": "^(B|A|D|P|H|F|Q)[0-9]{2}$"
         },
         "decision": {
           "enum": [
