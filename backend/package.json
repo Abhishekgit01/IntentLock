@@ -13,8 +13,10 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env --watch src/server.js",
     "start": "node --env-file-if-exists=.env src/server.js",
+    "dev:quai": "node --env-file=.env.quai --watch src/server.js",
+    "start:quai": "node --env-file=.env.quai src/server.js",
     "intentlock": "node src/cli.js",
-    "check": "node --check src/server.js && node --check src/cli.js && node --check src/app.js && node --check src/config.js && node --check src/proposals.js && node --check src/attestations.js && node --check src/hybrid-pq.js && node --check src/execution.js && node --check src/build_replay_export.js && node --check src/verify_bybit_tx.js && node --check src/events.js && node --check src/safe.js && node --check src/policy.js && node --check src/policy-format.js",
+    "check": "node --check src/server.js && node --check src/cli.js && node --check src/app.js && node --check src/config.js && node --check src/proposals.js && node --check src/attestations.js && node --check src/hybrid-pq.js && node --check src/execution.js && node --check src/build_replay_export.js && node --check src/verify_bybit_tx.js && node --check src/events.js && node --check src/safe.js && node --check src/quai-chain.js && node --check src/policy.js && node --check src/policy-format.js",
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.js\" \"*.json\"",
     "format:check": "prettier --check \"src/**/*.js\" \"*.json\""
@@ -22,6 +24,7 @@
   "dependencies": {
     "@noble/post-quantum": "0.7.1",
     "fastify": "5.12.8",
+    "quais": "1.0.0-alpha.52",
     "viem": "2.58.0"
   },
   "devDependencies": {

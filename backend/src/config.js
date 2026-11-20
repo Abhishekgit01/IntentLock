@@ -78,6 +78,9 @@ export function loadConfig(env = process.env) {
   const chainId = readInteger('CHAIN_ID', env.CHAIN_ID, DEFAULTS.chainId, {
     min: 1,
   });
+  if (chainId !== 31337 && chainId !== 15000) {
+    throw new Error('CHAIN_ID must be local Anvil 31337 or Quai Orchard 15000');
+  }
   const verifierThreshold = readInteger(
     'VERIFIER_THRESHOLD',
     env.VERIFIER_THRESHOLD,
@@ -112,6 +115,18 @@ export function loadConfig(env = process.env) {
     const rpcUrl = new URL(env.RPC_URL);
     if (!['http:', 'https:'].includes(rpcUrl.protocol)) {
       throw new Error('RPC_URL must use HTTP or HTTPS');
+    }
+    if (
+      chainId === 15000 &&
+      (rpcUrl.protocol !== 'https:' ||
+        rpcUrl.hostname !== 'orchard.rpc.quai.network' ||
+        rpcUrl.pathname !== '/' ||
+        rpcUrl.search ||
+        rpcUrl.hash)
+    ) {
+      throw new Error(
+        'CHAIN_ID 15000 requires the official Orchard RPC base URL',
+      );
     }
   }
   const safeVersion = env.SAFE_VERSION ?? DEFAULTS.safeVersion;
@@ -185,6 +200,7 @@ export function loadConfig(env = process.env) {
     chainId,
     rpcUrl: env.RPC_URL ?? DEFAULTS.rpcUrl,
     relayerPrivateKey,
+    allowQuaiBroadcast: env.ALLOW_QUAI_BROADCAST === 'YES',
     executionGasLimit: BigInt(executionGasLimit),
     safeVersion,
     safeAddress: readOptionalAddress('SAFE_ADDRESS', env.SAFE_ADDRESS),

@@ -2,9 +2,9 @@
 
 This document tracks the sponsor-required Quai integration. The existing Anvil deployment and tests remain the deterministic development path. Orchard Cyprus-1 is a separate test deployment target; it is not production, and no public-chain action is implicit in these instructions.
 
-**Status checked 2026-11-21:** The Safe 1.4.1 singleton, Safe proxy factory, Safe proxy, IntentLock Registry, and IntentLock Guard have been deployed on Orchard Cyprus-1. All seven deployment/configuration receipts have status `1`. Read-only RPC checks confirmed chain ID `15000`, deployed code at the five contract addresses, the Safe's installed guard, the Registry's guard and policy hash, the `2-of-3` verifier threshold, one Safe owner, and no enabled modules. Observed addresses, code hashes, configuration, and receipts are in [`deployments/quai-orchard-cyprus1.json`](../deployments/quai-orchard-cyprus1.json).
+**Status checked 2026-11-21:** The Safe 1.4.1 singleton, Safe proxy factory, Safe proxy, IntentLock Registry, and IntentLock Guard have been deployed on Orchard Cyprus-1. All seven deployment/configuration receipts have status `1`. Earlier read-only RPC checks confirmed chain ID `15000`, deployed code at the five contract addresses, the Safe's installed guard, the Registry's guard and policy hash, the `2-of-3` verifier threshold, one Safe owner, and no enabled modules. The currently available RPC attempt is timing out, so those reads have not been freshly repeated in this session. Observed addresses, code hashes, configuration, and receipts are in [`deployments/quai-orchard-cyprus1.json`](../deployments/quai-orchard-cyprus1.json).
 
-This is **not yet a complete live product integration**. Quaiscan source verification is `not_checked`, and the backend execution adapter supports only local Anvil chain ID `31337`. Do not set `CHAIN_ID=15000` in the existing backend and expect it to work. A benign transfer and a denied transaction have not been exercised through the verifier-to-Safe path on Orchard.
+This is **not yet a complete live product integration**. Quaiscan source verification is `not_checked`. The backend now has an Orchard adapter, but a benign transfer and a denied transaction have not been exercised through the verifier-to-Safe path on Orchard.
 
 ## Network verified from official docs
 
@@ -82,11 +82,13 @@ Deployment evidence is present for the contract deployments and initial configur
 The following remains before calling the **full Orchard demo** verified:
 
 1. Verify deployed source on Quaiscan using Solidity Standard JSON input from the exact Solidity `0.8.19`, London build. Update `explorerVerification` only after Quaiscan confirms the source.
-2. Implement and review a Quai RPC adapter for the backend. The existing backend uses viem's ordinary HTTP transport and restricts execution to chain ID `31337`; changing environment variables alone does not enable Quai.
-3. Configure the backend from the deployment manifest with the matching policy and verifier set. Keep all signer keys local.
-4. Fund the Safe with a small amount of Orchard test QUAI for the benign transfer fixture. The relayer also needs test QUAI for gas.
+2. A Quai RPC adapter and explicit Orchard server scripts are now implemented in `backend/src/quai-chain.js` and `backend/package.json`. The adapter has not passed a live RPC check in this session because the RPC request timed out. Its reads and sends must be validated against Cyprus-1 before the full integration is called working.
+3. Configure the separate ignored `backend/.env.quai` from the deployment manifest with the matching policy and verifier set. Generate or select a dedicated Orchard relayer key and keep all signer keys local. Confirm configured public addresses against chain reads.
+4. Fund the dedicated relayer and Safe with only the small amount needed for one benign test transfer and gas.
 5. Run an allowed transfer through two independent verifier signatures, on-chain Registry submission, Safe-owner signature, and Safe execution. Record actual receipts and balance changes.
 6. Run a denied or missing-attestation transaction and record its mined failed receipt and observed guard error. Do not use local Anvil results as Orchard evidence.
+
+The manifest's top-level `observedBlockNumber` was read from the SDK's default shard instead of Cyprus-1. It is cleared until the Cyprus-1 height can be freshly read; per-transaction deployment block numbers remain recorded from the confirmed receipts. The preflight script now explicitly requests the Cyprus-1 shard.
 
 Keep local Anvil test results labeled as local; they are not Quai execution evidence. Explorer verification is a separate status and is only complete after checking it on Quaiscan.
 

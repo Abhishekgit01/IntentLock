@@ -16,6 +16,18 @@ function apiError(statusCode, code, message) {
   return error;
 }
 
+function executionEnabled(config) {
+  const supportedNetwork =
+    config.chainId === 31337 ||
+    (config.chainId === 15000 && config.allowQuaiBroadcast);
+  return Boolean(
+    config.safeAddress &&
+    config.registryAddress &&
+    config.relayerPrivateKey &&
+    supportedNetwork,
+  );
+}
+
 function sendSseEvent(response, event) {
   response.write(`id: ${event.sequence}\n`);
   response.write(`event: ${event.type}\n`);
@@ -33,6 +45,9 @@ export function buildApp(config) {
     proposals: new Map(),
     activeBySafeNonce: new Map(),
   };
+  app.addHook('onClose', async () => {
+    await client.close?.();
+  });
   const proposalService = createProposalService({ client, config, store });
 
   app.addHook('onRequest', async (request, reply) => {
@@ -132,12 +147,7 @@ export function buildApp(config) {
         safeConfigured: safeReady,
         policyConfigured: policyReady,
         registrySubmissionAvailable: Boolean(config.registryAddress),
-        executionAvailable: Boolean(
-          config.safeAddress &&
-          config.registryAddress &&
-          config.relayerPrivateKey &&
-          config.chainId === 31337,
-        ),
+        executionAvailable: executionEnabled(config),
         relayerConfigured: Boolean(config.relayerPrivateKey),
       });
     } catch {
@@ -312,12 +322,7 @@ export function buildApp(config) {
       threshold: result.threshold,
       thresholdMet: result.validSignerCount >= result.threshold,
       registrySubmission: 'NOT_SUBMITTED',
-      executionAvailable: Boolean(
-        config.safeAddress &&
-        config.registryAddress &&
-        config.relayerPrivateKey &&
-        config.chainId === 31337,
-      ),
+      executionAvailable: executionEnabled(config),
     });
   });
 

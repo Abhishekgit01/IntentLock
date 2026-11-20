@@ -1,4 +1,5 @@
 import { createPublicClient, http, parseAbi } from 'viem';
+import { createQuaiChainClient } from './quai-chain.js';
 
 export const SAFE_ABI = parseAbi([
   'function VERSION() view returns (string)',
@@ -10,6 +11,10 @@ export const SAFE_ABI = parseAbi([
 ]);
 
 export function createChainClient(config) {
+  if (config.chainId === 15000) return createQuaiChainClient(config);
+  if (config.chainId !== 31337) {
+    throw new Error('IntentLock supports only Anvil 31337 or Orchard 15000');
+  }
   return createPublicClient({
     transport: http(config.rpcUrl, { timeout: 5000 }),
   });

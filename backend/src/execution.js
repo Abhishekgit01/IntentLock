@@ -51,20 +51,9 @@ function sameAttestation(left, right) {
 }
 
 function requireLocalRelayer(config) {
-  if (config.chainId !== 31337) {
-    throw executionError(
-      400,
-      'UNSUPPORTED_CHAIN',
-      'The configured execution adapter only supports local Anvil chain 31337',
-    );
-  }
   const rpc = new URL(config.rpcUrl);
   if (!['localhost', '127.0.0.1', '::1', '[::1]'].includes(rpc.hostname)) {
-    throw executionError(
-      400,
-      'NONLOCAL_RPC',
-      'The execution relayer is restricted to a localhost Anvil RPC endpoint',
-    );
+    throw executionError(400, 'NONLOCAL_RPC', 'Expected a localhost Anvil RPC');
   }
   if (!config.relayerPrivateKey) {
     throw executionError(
@@ -84,6 +73,62 @@ function requireLocalRelayer(config) {
     );
   }
   return privateKeyToAccount(config.relayerPrivateKey);
+}
+
+function requireQuaiRelayer(client, config) {
+  if (!config.allowQuaiBroadcast) {
+    throw executionError(
+      403,
+      'QUAI_BROADCAST_DISABLED',
+      'Set ALLOW_QUAI_BROADCAST=YES locally to enable Orchard transaction submission',
+    );
+  }
+  if (
+    config.chainId !== 15000 ||
+    client.kind !== 'quai-orchard' ||
+    new URL(config.rpcUrl).hostname !== 'orchard.rpc.quai.network'
+  ) {
+    throw executionError(
+      400,
+      'UNSUPPORTED_CHAIN',
+      'Quai transaction submission is restricted to the official Orchard RPC and chain ID 15000',
+    );
+  }
+  if (!config.relayerPrivateKey) {
+    throw executionError(
+      503,
+      'RELAYER_NOT_CONFIGURED',
+      'Configure a dedicated local Orchard relayer key in the ignored backend environment',
+    );
+  }
+  if (
+    !isHex(config.relayerPrivateKey, { strict: true }) ||
+    config.relayerPrivateKey.length !== 66
+  ) {
+    throw executionError(
+      500,
+      'RELAYER_KEY_INVALID',
+      'Configured Orchard relayer key is malformed',
+    );
+  }
+  return client.createWallet(config.relayerPrivateKey);
+}
+
+function requireRelayer(client, config) {
+  if (config.chainId === 31337) return requireLocalRelayer(config);
+  if (config.chainId === 15000) return requireQuaiRelayer(client, config);
+  throw executionError(
+    400,
+    'UNSUPPORTED_CHAIN',
+    'Execution supports only local Anvil or Quai Orchard',
+  );
+}
+
+async function writeContract(client, wallet, request) {
+  if (client.kind === 'quai-orchard') {
+    return client.writeContract(wallet, request);
+  }
+  return wallet.writeContract(request);
 }
 
 function asRegistryAttestation(attestation) {
@@ -115,7 +160,7 @@ async function ensureRegistryAttestation({ client, wallet, config, proposal }) {
   }
   const signatures = records.map((record) => record.signature);
   try {
-    const transactionHash = await wallet.writeContract({
+    const transactionHash = await writeContract(client, wallet, {
       address: config.registryAddress,
       abi: REGISTRY_ABI,
       functionName: 'submitAttestation',
@@ -231,20 +276,23 @@ export async function executeProposalOnchain({
     );
   }
 
-  const relayer = requireLocalRelayer(config);
+  const relayer = requireRelayer(client, config);
   const observedChainId = await client.getChainId();
-  if (observedChainId !== 31337) {
+  if (observedChainId !== config.chainId) {
     throw executionError(
       409,
       'CHAIN_MISMATCH',
-      `Execution RPC reports chain ${observedChainId}; expected local Anvil 31337`,
+      `Execution RPC reports chain ${observedChainId}; expected ${config.chainId}`,
     );
   }
   await assertSafeReady(client, config, observedChainId, config.safeAddress);
-  const wallet = createWalletClient({
-    account: relayer,
-    transport: http(config.rpcUrl),
-  });
+  const wallet =
+    client.kind === 'quai-orchard'
+      ? relayer
+      : createWalletClient({
+          account: relayer,
+          transport: http(config.rpcUrl),
+        });
   const registryReceipt = await ensureRegistryAttestation({
     client,
     wallet,
@@ -274,7 +322,7 @@ export async function executeProposalOnchain({
 
   let transactionHash;
   try {
-    transactionHash = await wallet.writeContract({
+    transactionHash = await writeContract(client, wallet, {
       address: config.safeAddress,
       abi: EXEC_SAFE_ABI,
       functionName: 'execTransaction',

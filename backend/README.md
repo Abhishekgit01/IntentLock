@@ -2,7 +2,7 @@
 
 This is the current backend/API slice. It validates complete Safe transaction fields, asks the configured Safe 1.4.1 contract for the canonical Safe transaction hash, decodes native `CALL` transfers and canonical allowlisted ERC-20 `transfer(address,uint256)` calls, applies an explicit allowlist/cap policy, accepts external EIP-712 verifier signatures, and exposes proposal/event state for the UI.
 
-It is a local development service. It does not contain verifier or Safe-owner keys. The optional relayer key only pays gas on a localhost Anvil chain; verifier attestations and Safe signatures must be supplied externally. Execution is available only after independent verifier signatures meet threshold, the registry confirms that exact attestation, and the request supplies authorized Safe signature bytes. The guard remains the final enforcement point. The backend does not implement the guard-replacement timelock.
+It is a development service with separate local Anvil and Quai Orchard modes. It does not contain verifier or Safe-owner keys. Verifier attestations and Safe signatures must be supplied externally. Execution is enabled on Anvil only for localhost RPC; Orchard broadcasts require a separate ignored environment file and the explicit `ALLOW_QUAI_BROADCAST=YES` switch. Execution is available only after independent verifier signatures meet threshold, the registry confirms that exact attestation, and the request supplies authorized Safe signature bytes. The guard remains the final enforcement point. The backend does not implement the guard-replacement timelock.
 
 ## Start
 
@@ -17,6 +17,20 @@ npm run dev
 ```
 
 The server binds to `127.0.0.1:8787` by default. Browser origins must be listed in `ALLOWED_ORIGINS`. It uses in-memory proposal/signature state; restarting the backend clears that state. This is not suitable for production or multi-process use.
+
+### Quai Orchard mode
+
+The Orchard adapter uses the pinned `quais` SDK with pathing and Cyprus-1 block reads. It accepts only chain ID `15000` and the official base RPC URL `https://orchard.rpc.quai.network`. Create a separate ignored `backend/.env.quai` from `.env.example`; set the Orchard Safe, Registry, verifier set and threshold, and the same native policy as the deployed Registry. Put a dedicated, low-balance test relayer key in `RELAYER_PRIVATE_KEY`. Do not reuse the Registry owner/Safe owner key or any wallet with real funds. Do not put this file in the frontend or commit it.
+
+The broadcast safeguard is off by default. Set `ALLOW_QUAI_BROADCAST=YES` only in the local `backend/.env.quai` after checking every configured address and the dedicated relayer balance. Then start the service with:
+
+```sh
+npm run dev:quai
+# or, without watch mode:
+npm run start:quai
+```
+
+Before proposing a transaction, check `GET /health` and `GET /v1/context`; both must report chain `15000`, the expected Safe and Registry configuration, the intended policy hash, and the currently observed Safe nonce. The proposal process is still in-memory. A successful HTTP response is not chain evidence: use the returned transaction hashes, receipts, block numbers, gas use, and balance/state reads to establish what happened. The Orchard path has not been validated by a full end-to-end verifier-to-Safe transaction unless the current run records those receipts.
 
 ## Routes
 

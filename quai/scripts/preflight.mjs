@@ -26,7 +26,7 @@ export async function orchardPreflight() {
             `RPC chain ID is ${chainId}; expected Orchard 15000. Stopped.`,
           );
         }
-        const blockNumber = await provider.getBlockNumber();
+        const blockNumber = await provider.getBlockNumber(quais.Shard.Cyprus1);
         return { endpoint, chainId, blockNumber, provider };
       })(),
       new Promise((_, reject) => {
