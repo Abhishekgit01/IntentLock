@@ -132,3 +132,48 @@ export function deriveRun(ref: RunRef, mode: Mode, elapsedMs: number): Derived {
   const attested = VERIFIER_IDS.filter((v) => status[v] === 'ok').length
   return { status, caption, stage, vault: { balance: Math.max(0, balance), core }, stamp, result, receipt, attested, needed: REGISTRY.needed }
 }
+
+export function deriveCustomRun(events: SceneEvent[], mode: Mode, elapsedMs: number): Derived {
+  const status = Object.fromEntries(NODE_IDS.map((n) => [n, 'idle'])) as Record<NodeId, Status>
+  if (mode === 'unguarded') for (const n of GUARD_NODES) status[n] = 'off'
+
+  let caption = IDLE_CAPTION
+  let stage: PayloadStage = 'home'
+  let core: VaultCore = 'good'
+  let stamp: StampKind | null = null
+  let result: Derived['result'] = null
+  let bal: number = VAULT.startBalance
+  let anim: Anim | null = null
+  const receipt: Receipt = { landed: false, source: DEFAULT_SOURCE, outcome: null, checks: null, trace: null, stateDiff: null }
+
+  if (elapsedMs >= 0) {
+    for (const ev of events) {
+      if (ev.t > elapsedMs) break
+      status[ev.node] = ev.status
+      caption = ev.label
+      if (ev.stage) stage = ev.stage
+      if (ev.stamp) stamp = ev.stamp
+      if (ev.revert || ev.fixtureId) result = { revert: ev.revert?.name, fixtureId: ev.fixtureId }
+      if (ev.txHash) {
+        receipt.landed = true
+        receipt.txHash = ev.txHash
+        receipt.blockNumber = ev.blockNumber
+        receipt.gasUsed = ev.gasUsed
+        receipt.source = ev.source ?? DEFAULT_SOURCE
+        receipt.outcome = ev.blockOutcome ?? null
+        receipt.revert = ev.revert
+        receipt.checks = ev.guardChecks ?? null
+        receipt.trace = ev.trace ?? null
+        receipt.stateDiff = ev.stateDiff ?? null
+      }
+      if (ev.vault) {
+        if (anim) bal = valueAt(anim, ev.t)
+        anim = { from: bal, to: ev.vault.balance ?? bal, start: ev.t, ms: ev.vault.ms ?? 0 }
+        if (ev.vault.core) core = ev.vault.core
+      }
+    }
+  }
+  const balance = anim ? valueAt(anim, elapsedMs) : bal
+  const attested = VERIFIER_IDS.filter((v) => status[v] === 'ok').length
+  return { status, caption, stage, vault: { balance: Math.max(0, balance), core }, stamp, result, receipt, attested, needed: REGISTRY.needed }
+}

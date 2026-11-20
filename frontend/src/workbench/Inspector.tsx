@@ -104,7 +104,7 @@ function ChecksTab({ wb }: { wb: Workbench }) {
             ? 'No guard is installed here, so nothing was checked.'
             : failAt >= 0
               ? `Stopped at check ${failAt + 1}. Later checks are not reached.`
-              : 'All checks passed. The payload may run.'}
+              : 'All simulated checks passed. This scenario depicts the payload proceeding.'}
       </p>
     </div>
   )
@@ -112,7 +112,7 @@ function ChecksTab({ wb }: { wb: Workbench }) {
 
 function RevertTab({ wb }: { wb: Workbench }) {
   const r = wb.derived.receipt
-  if (!r.landed) return <Empty>Waiting for the transaction to land in a block. Press play.</Empty>
+  if (!r.landed) return <Empty>Waiting for the simulated event. Press play.</Empty>
   const rev = r.revert
   return (
     <dl className="divide-y divide-[#2a241d]">
@@ -128,9 +128,9 @@ function RevertTab({ wb }: { wb: Workbench }) {
         <Field k="Error name"><span className="text-[15px] text-[#7ACB8A]">None. The transaction did not revert.</span></Field>
       )}
       <Field k="txHash" copy={r.txHash}><span className={mono}>{r.txHash}</span></Field>
-      <Field k="blockNumber"><span className={mono}>{r.blockNumber?.toLocaleString('en-US')}</span></Field>
-      <Field k="gasUsed"><span className={mono}>{r.gasUsed?.toLocaleString('en-US')}</span></Field>
-      <Field k="status"><span className={`font-mono text-[13px] font-bold ${rev ? 'text-[#ff6a5e]' : 'text-[#7ACB8A]'}`}>{rev ? 'reverted (0x0)' : 'success (0x1)'}</span></Field>
+      {r.source === 'chain' && <Field k="blockNumber"><span className={mono}>{r.blockNumber?.toLocaleString('en-US')}</span></Field>}
+      {r.source === 'chain' && <Field k="gasUsed"><span className={mono}>{r.gasUsed?.toLocaleString('en-US')}</span></Field>}
+      <Field k={r.source === 'mock' ? 'Illustrative outcome' : 'status'}><span className={`font-mono text-[13px] font-bold ${rev ? 'text-[#ff6a5e]' : 'text-[#7ACB8A]'}`}>{r.source === 'mock' ? (rev ? 'would revert' : 'would succeed') : rev ? 'reverted (0x0)' : 'success (0x1)'}</span></Field>
     </dl>
   )
 }
@@ -243,7 +243,7 @@ function DigestTab({ wb }: { wb: Workbench }) {
 
 function StateTab({ wb }: { wb: Workbench }) {
   const r = wb.derived.receipt
-  if (!r.landed || !r.stateDiff) return <Empty>No state change yet. Press play and wait for the block.</Empty>
+  if (!r.landed || !r.stateDiff) return <Empty>No simulated state change yet. Press play.</Empty>
   return (
     <div>
       <div role="table" aria-label="State before and after" className="overflow-hidden rounded-xl border border-[#2f2922]">
@@ -264,7 +264,11 @@ function StateTab({ wb }: { wb: Workbench }) {
         })}
       </div>
       <p className="mt-3 text-sm text-[#a89f90]">
-        {r.stateDiff.some((x) => x.before !== x.after) ? 'Highlighted rows changed on chain.' : 'Nothing changed. The reverted transaction left no trace in state.'}
+        {r.source === 'mock'
+          ? 'Illustrative state rows for this scenario; no chain state was read.'
+          : r.stateDiff.some((x) => x.before !== x.after)
+            ? 'Highlighted rows changed on chain.'
+            : 'Nothing changed. The reverted transaction left no trace in state.'}
       </p>
     </div>
   )
@@ -326,7 +330,7 @@ export function Inspector({ wb, tab, setTab, onClose }: { wb: Workbench; tab: In
       <header className="flex items-center justify-between gap-3 px-4 pb-2 pt-4">
         <div className="min-w-0">
           <h2 className="font-display text-xl font-extrabold uppercase leading-none tracking-tight">Inspector</h2>
-          <p className="mt-1 text-[12px] text-[#a89f90]">What the chain recorded for this run.</p>
+          <p className="mt-1 text-[12px] text-[#a89f90]">Scenario details and simulated checks.</p>
         </div>
         <div className="flex items-center gap-2">
           {r.source === 'mock' && <span className="rounded-full border border-[#E3A73B] px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-[#E3A73B]">Mock data</span>}
@@ -376,7 +380,7 @@ export function Inspector({ wb, tab, setTab, onClose }: { wb: Workbench; tab: In
             </li>
           ))}
         </ul>
-        {r.source === 'mock' && <p className="mt-2 text-[12px] text-[#a89f90]">Mock values. They resolve once the source is a real chain.</p>}
+        {r.source === 'mock' && <p className="mt-2 text-[12px] text-[#a89f90]">No reproduce commands: this is a mock scenario and no transaction was sent to a chain.</p>}
       </footer>
     </section>
   )

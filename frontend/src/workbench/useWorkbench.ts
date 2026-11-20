@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { deriveRun, resolveRun, type Derived } from "./engine";
+import { deriveRun, deriveCustomRun, resolveRun, type Derived } from "./engine";
 import {
   TOUR,
   type BreakId,
@@ -23,6 +23,9 @@ import {
   type LiveExecutionResult,
   type LiveProposal,
 } from "./backend";
+import { loadReplayData } from "../replay/loader";
+import { adaptReplayToScene } from "../replay/adapter";
+import type { ReplayData, ReplayRunKey } from "../replay/types";
 
 export type RunStatus = "idle" | "running" | "done";
 const TICK_MS = 80;
@@ -57,6 +60,12 @@ export interface Workbench {
   selected: NodeId | null;
   crateOpen: boolean;
   tourStep: number | null;
+  badges: readonly string[];
+  replayData: ReplayData | null;
+  activeReplayRun: ReplayRunKey;
+  chooseReplayRun: (key: ReplayRunKey) => void;
+  scrubElapsed: (ms: number) => void;
+  togglePlayPause: () => void;
   liveBackend: {
     connection: "loading" | "ready" | "degraded" | "offline";
     health: BackendHealth | null;
@@ -95,6 +104,17 @@ export function useWorkbench(): Workbench {
   const [selected, setSelected] = useState<NodeId | null>(null);
   const [crateOpen, setCrateOpen] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
+  const [replayData, setReplayData] = useState<ReplayData | null>(null);
+  const [activeReplayRun, setActiveReplayRun] = useState<ReplayRunKey>("runC");
+
+  useEffect(() => {
+    loadReplayData().then((data) => {
+      if (data) {
+        setReplayData(data);
+      }
+    });
+  }, []);
+
   const [liveBackend, setLiveBackend] = useState<Workbench["liveBackend"]>({
     connection: "loading",
     health: null,
@@ -291,11 +311,57 @@ export function useWorkbench(): Workbench {
     if (tourStep !== null && tourStep > 0) applyStep(tourStep - 1);
   }, [tourStep, applyStep]);
 
-  const resolved = useMemo(() => resolveRun(ref, mode), [ref, mode]);
-  const derived = useMemo(
-    () => deriveRun(ref, mode, runStatus === "idle" ? -1 : elapsedMs),
-    [ref, mode, runStatus, elapsedMs],
+  const chooseReplayRun = useCallback((key: ReplayRunKey) => {
+    stop();
+    setActiveReplayRun(key);
+    setModeState(key === "runC" ? "guarded" : "unguarded");
+    setElapsed(0);
+    setRunStatus("idle");
+  }, [stop]);
+
+  const scrubElapsed = useCallback((ms: number) => {
+    stop();
+    setElapsed(ms);
+    setRunStatus("done");
+  }, [stop]);
+
+  const togglePlayPause = useCallback(() => {
+    if (runStatus === "running") {
+      stop();
+      setRunStatus("idle");
+    } else {
+      stop();
+      setElapsed(0);
+      setRunStatus("running");
+      const duration = 2400;
+      const t0 = performance.now();
+      timer.current = window.setInterval(() => {
+        const el = performance.now() - t0;
+        if (el >= duration) {
+          stop();
+          setElapsed(duration);
+          setRunStatus("done");
+        } else setElapsed(el);
+      }, TICK_MS);
+    }
+  }, [runStatus, stop]);
+
+  const replayScene = useMemo(
+    () => adaptReplayToScene(replayData, activeReplayRun),
+    [replayData, activeReplayRun],
   );
+
+  const resolved = useMemo(() => resolveRun(ref, mode), [ref, mode]);
+  const derived = useMemo(() => {
+    if (replayData) {
+      return deriveCustomRun(
+        replayScene.events,
+        activeReplayRun === "runC" ? "guarded" : "unguarded",
+        runStatus === "idle" ? -1 : elapsedMs,
+      );
+    }
+    return deriveRun(ref, mode, runStatus === "idle" ? -1 : elapsedMs);
+  }, [replayData, replayScene, activeReplayRun, runStatus, elapsedMs, ref, mode]);
 
   return {
     reducedMotion,
@@ -303,14 +369,20 @@ export function useWorkbench(): Workbench {
     ref,
     runStatus,
     elapsedMs,
-    durationMs: resolved.durationMs,
+    durationMs: replayData ? 2400 : resolved.durationMs,
     derived,
-    payload: resolved.payload,
+    payload: replayData ? replayScene.payload : resolved.payload,
     focus,
     focusTick,
     selected,
     crateOpen,
     tourStep,
+    badges: replayScene.badges,
+    replayData,
+    activeReplayRun,
+    chooseReplayRun,
+    scrubElapsed,
+    togglePlayPause,
     liveBackend,
     setMode,
     chooseScenario,

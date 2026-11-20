@@ -440,10 +440,10 @@ export function VaultCube({ balance, core, status, onSelect }: { balance: number
         <Glow color={coreColor} intensity={core === 'bad' ? 2.4 : 1.4} />
       </mesh>
       <Halo color={coreColor} radius={0.95} opacity={0.1} />
-      <T position={[0, -1.02, 1.5]} size={0.17} color={coreColor}>{`implementation ${VAULT.cores[core]}`}</T>
+      <T position={[0, -1.02, 1.5]} size={0.17} color={coreColor}>{`slot 0: ${VAULT.cores[core]}`}</T>
       <T position={[0, 2.7, 0]} size={0.24} color={COL.cream}>VAULT</T>
       <T position={[0, 2.2, 0]} size={0.46} color={status === 'bad' ? COL.red : COL.cream}>{`${balance.toFixed(3)} ETH`}</T>
-      <T position={[0, 1.85, 0]} size={0.15} color={COL.amber}>SYNTHETIC BALANCE</T>
+      <T position={[0, 1.85, 0]} size={0.15} color={COL.amber}>REPLAY VAULT</T>
     </Pick>
   )
 }

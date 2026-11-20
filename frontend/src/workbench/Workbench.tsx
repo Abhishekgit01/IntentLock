@@ -2,7 +2,7 @@ import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from '
 import { Link } from 'react-router'
 import { motion } from 'motion/react'
 import { ArrowLeft, MonitorOff, PanelRightClose, PanelRightOpen } from 'lucide-react'
-import { BADGES, STAMP_TEXT, TOUR, type InspectorTab, type StampKind } from './scenes'
+import { STAMP_TEXT, TOUR, type InspectorTab, type StampKind } from './scenes'
 import { useWorkbench } from './useWorkbench'
 import { Panel } from './Panel'
 import { Inspector } from './Inspector'
@@ -86,9 +86,7 @@ export default function Workbench() {
   }, [wb.tourStep, wb.endTour, wb])
 
   const caption = wb.tourStep !== null && wb.runStatus !== 'running' ? TOUR[wb.tourStep].caption : wb.derived.caption
-  const source = wb.derived.receipt.source
-  // the MOCK DATA badge stays until the data source is a real chain
-  const badges = BADGES.filter((b) => !(b === 'MOCK DATA' && source === 'chain'))
+  const badges = wb.badges
   const inspector = <Inspector wb={wb} tab={tab} setTab={setTab} onClose={() => setInspectorOpen(false)} />
 
   return (

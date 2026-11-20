@@ -69,7 +69,11 @@ export function BlockRow({ receipt }: { receipt: Receipt }) {
             {newest && (
               <Html position={[0, 2.1, 0]} center zIndexRange={[8, 0]} style={{ pointerEvents: 'none' }}>
                 <div className="flex flex-col items-center gap-1.5">
-                  <span className="whitespace-nowrap font-mono text-[11px] font-bold tracking-wider text-[#F5EEDF]">{`BLOCK #${CHAIN.block.toLocaleString('en-US')}`}</span>
+                  <span className="whitespace-nowrap font-mono text-[11px] font-bold tracking-wider text-[#F5EEDF]">
+                    {receipt.blockNumber
+                      ? `BLOCK #${receipt.blockNumber.toLocaleString('en-US')}`
+                      : 'SIMULATED BLOCK'}
+                  </span>
                   <Pill color={receipt.outcome ? outcomeColor : COL.dim}>{receipt.outcome ? BLOCK_OUTCOME_TEXT[receipt.outcome] : 'AWAITING TX'}</Pill>
                 </div>
               </Html>

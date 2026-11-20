@@ -21,16 +21,18 @@ const all = JSON.stringify(m);
 if (/\\$|audited|production-ready/i.test(all)) bad.push('forbidden wording or dollar sign present');
 for (const sc of m.SCENARIOS) for (const mode of ['guarded','unguarded']) { const ts = sc[mode].map(e=>e.t); if (ts.some((t,i)=>i&&t<ts[i-1])) bad.push(sc.id+'/'+mode+' events out of order') }
 for (const b of m.BREAKS) { const ts = b.events.map(e=>e.t); if (ts.some((t,i)=>i&&t<ts[i-1])) bad.push(b.id+' events out of order'); if(!b.events.some(e=>e.revert&&e.fixtureId)) bad.push(b.id+' has no revert+fixture') }
-// receipts: every played timeline lands a tx with full inspector data, and all mock identifiers carry the 0xMOCK marker
+// scene events are complete, and mock identifiers cannot be mistaken for chain data
 const landing = (events, where) => {
   const ev = events.find((x) => x.txHash)
   if (!ev) { bad.push(where + ' has no landing event with a txHash'); return }
-  for (const f of ['blockNumber','gasUsed','source','blockOutcome','guardChecks','trace','stateDiff']) if (ev[f] === undefined) bad.push(where + ' landing event missing ' + f)
+  for (const f of ['source','blockOutcome','guardChecks','trace','stateDiff']) if (ev[f] === undefined) bad.push(where + ' landing event missing ' + f)
   if (ev.source === 'mock') {
     if (!ev.txHash.startsWith('0xMOCK')) bad.push(where + ' txHash does not start with 0xMOCK')
+    if (ev.blockNumber !== undefined || ev.gasUsed !== undefined) bad.push(where + ' mock event must not claim a block number or gas usage')
     if (ev.revert && !ev.revert.selector.startsWith('0xMOCK')) bad.push(where + ' selector does not start with 0xMOCK')
     for (const a of ev.revert?.args ?? []) { const m = a.match(/0x[0-9A-Za-z]{20,}/g) ?? []; for (const h of m) if (!h.startsWith('0xMOCK')) bad.push(where + ' hash in args lacks 0xMOCK: ' + h) }
   } else if (ev.source === 'chain') {
+    for (const f of ['blockNumber','gasUsed']) if (ev[f] === undefined) bad.push(where + ' chain event missing ' + f)
     if (!/^0x[0-9a-fA-F]{64}$/.test(ev.txHash)) bad.push(where + ' txHash is not a valid 32-byte hex: ' + ev.txHash)
     if (ev.revert && !/^0x[0-9a-fA-F]{8}$/.test(ev.revert.selector)) bad.push(where + ' selector is not a valid 4-byte selector: ' + ev.revert.selector)
   }
@@ -72,5 +74,5 @@ for (const f of [m.CHAIN.vaultAddress, m.CHAIN.calldataSelector]) if (!/^0x[0-9a
   if (road.ROADMAP.items.length !== 3) bad.push('roadmap must have 3 items');
 }
 if (bad.length) { console.error(bad.join('\\n')); process.exit(1) }
-console.log('workbench data OK: captions within limits, receipts complete, 0xMOCK markers, fixtures shape valid, wording rules hold');
+console.log('workbench data OK: captions within limits, mock events clearly marked, fixture shape valid, wording rules hold');
 `], { stdio: 'inherit' })

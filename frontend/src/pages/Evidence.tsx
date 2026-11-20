@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Bar, BarChart, LabelList, PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
-import { Check, ChevronDown, Cpu, FileSearch, Flame, ShieldCheck, X } from 'lucide-react'
+import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+import { ChevronDown, Cpu, FileSearch, Flame, ShieldCheck } from 'lucide-react'
 import { EVIDENCE, txFor, type FixtureCategory } from '@/lib/data'
 import { SCRIPTS } from '@/lib/script'
 import { useIntentLock } from '@/lib/useIntentLockEvents'
@@ -38,31 +38,24 @@ export default function Evidence() {
   }, [])
   const stats = useMemo(() => {
     const total = EVIDENCE.length
-    const pass = EVIDENCE.filter((r) => r.result === 'Pass').length
-    const legit = EVIDENCE.filter((r) => r.category === 'Legitimate')
     return {
       total,
-      pass,
-      rate: (pass / total) * 100,
-      falseReverts: legit.filter((r) => r.result === 'Fail').length,
-      legitTotal: legit.length,
       byCat: CATS.map((c) => {
         const rows = EVIDENCE.filter((r) => r.category === c)
-        return { cat: c, pass: rows.filter((r) => r.result === 'Pass').length, fail: rows.filter((r) => r.result === 'Fail').length }
+        return { cat: c, fixtures: rows.length }
       }),
     }
   }, [])
   const rows = filter === 'All' ? EVIDENCE : EVIDENCE.filter((r) => r.category === filter)
 
-  const okFill = isDark ? '#7ACB8A' : '#2C7A45'
-  const badFill = isDark ? '#FF5A36' : '#B3261E'
+  const chartFill = isDark ? '#7ACB8A' : '#2C7A45'
   const axisColor = isDark ? '#E2DFD7' : '#1E1913'
   const barLabelFill = isDark ? '#090908' : '#FCF8EF'
 
   return (
     <div className="mx-auto max-w-[1280px] px-5 pb-10 md:px-10">
       <PageHeader index="04" label="Evidence" parts={[{ t: 'Fixtures, not' }, { t: 'promises.', em: true }]}>
-        Each fixture is a transaction the guard must revert, or one it must let through. Verified on local Anvil chain 31337 and Foundry test suite; live gas benchmarks loaded from /run.json.
+        This is the expected-behavior catalog, not a report of executions. The attached run file contains selected gas benchmarks only; per-fixture receipts are not attached.
       </PageHeader>
 
       {runData && (
@@ -71,7 +64,7 @@ export default function Evidence() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-edge pb-4">
               <div className="flex items-center gap-2.5">
                 <Flame className="size-5 text-flame" aria-hidden />
-                <h3 className="font-display text-2xl font-extrabold uppercase">Measured On-Chain Gas</h3>
+                <h3 className="font-display text-2xl font-extrabold uppercase">Selected Gas Benchmarks</h3>
                 <span className="rounded-full bg-ok/15 px-2.5 py-0.5 font-mono text-[11px] font-bold uppercase text-ok">
                   from /run.json
                 </span>
@@ -113,30 +106,12 @@ export default function Evidence() {
         <Reveal className="lg:col-span-4">
           <div className="card flex h-full flex-col bg-flame p-6 text-on-flame">
             <SyntheticBadge className="self-start !bg-paper" />
-            <p className="eyebrow mt-5 !text-on-flame">Overall pass rate</p>
-            <div className="relative mx-auto mt-2 h-56 w-56">
-              <SafeBoundary label="The pass-rate chart">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <RadialBarChart innerRadius="76%" outerRadius="100%" data={[{ v: stats.rate }]} startAngle={90} endAngle={-270} accessibilityLayer={false}>
-                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} angleAxisId={0} />
-                    <RadialBar dataKey="v" background={{ fill: '#FCF8EF' }} cornerRadius={20} fill="#120F0C" />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-              </SafeBoundary>
-              <div className="pointer-events-none absolute inset-0 grid place-content-center text-center">
-                <p className="font-display text-5xl font-extrabold"><CountUp to={stats.rate} decimals={1} /><span className="text-2xl">%</span></p>
-                <p className="mt-1 font-mono text-xs font-bold">{stats.pass} of {stats.total} fixtures</p>
-              </div>
-            </div>
-            <dl className="mt-auto grid grid-cols-2 gap-4 border-t-2 border-on-flame/35 pt-5">
-              <div>
-                <dt className="eyebrow !text-on-flame">False reverts</dt>
-                <dd className="mt-1 font-display text-4xl font-extrabold tabular-nums">{stats.falseReverts}<span className="text-lg"> / {stats.legitTotal}</span></dd>
-              </div>
-              <div>
-                <dt className="eyebrow !text-on-flame">Open failures</dt>
-                <dd className="mt-1 font-display text-4xl font-extrabold tabular-nums">{stats.total - stats.pass}</dd>
-              </div>
+            <p className="eyebrow mt-5 !text-on-flame">Fixture catalog</p>
+            <p className="mt-3 font-display text-6xl font-extrabold tabular-nums"><CountUp to={stats.total} /></p>
+            <p className="mt-2 max-w-xs text-sm">Expected-behavior entries. None are counted as run results here.</p>
+            <dl className="mt-auto border-t-2 border-on-flame/35 pt-5">
+              <dt className="eyebrow !text-on-flame">Catalog result rows attached</dt>
+              <dd className="mt-1 font-display text-4xl font-extrabold tabular-nums">0 <span className="text-lg">/ {stats.total}</span></dd>
             </dl>
           </div>
         </Reveal>
@@ -144,27 +119,20 @@ export default function Evidence() {
         <Reveal className="lg:col-span-8" delay={0.1}>
           <div className="card h-full p-6">
             <SyntheticBadge />
-            <p className="eyebrow mt-5">Pass / fail by category</p>
-            <div className="mt-3 h-64" role="img" aria-label={`Pass and fail counts: ${stats.byCat.map((c) => `${c.cat} ${c.pass} pass ${c.fail} fail`).join('; ')}`}>
-              <SafeBoundary label="The category chart">
+            <p className="eyebrow mt-5">Fixture count by category</p>
+            <div className="mt-3 h-64" role="img" aria-label={`Fixture counts by category: ${stats.byCat.map((c) => `${c.cat} ${c.fixtures}`).join('; ')}`}>
+              <SafeBoundary label="The fixture catalog chart">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart data={stats.byCat} layout="vertical" margin={{ left: 8, right: 28, top: 4, bottom: 4 }} barSize={24} accessibilityLayer={false}>
-                    <XAxis type="number" hide domain={[0, 4]} />
+                    <XAxis type="number" hide allowDecimals={false} />
                     <YAxis type="category" dataKey="cat" width={120} axisLine={false} tickLine={false} tick={{ fill: axisColor, fontSize: 14, fontFamily: 'DM Sans', fontWeight: 600 }} />
-                    <Bar dataKey="pass" stackId="a" fill={okFill} radius={[8, 0, 0, 8]}>
-                      <LabelList dataKey="pass" position="insideRight" fill={barLabelFill} fontSize={13} fontFamily="JetBrains Mono" fontWeight={700} formatter={(v: unknown) => (Number(v) > 0 ? String(v) : '')} />
-                    </Bar>
-                    <Bar dataKey="fail" stackId="a" fill={badFill} radius={[0, 8, 8, 0]}>
-                      <LabelList dataKey="fail" position="insideRight" fill={barLabelFill} fontSize={13} fontFamily="JetBrains Mono" fontWeight={700} formatter={(v: unknown) => (Number(v) > 0 ? String(v) : '')} />
+                    <Bar dataKey="fixtures" fill={chartFill} radius={[0, 8, 8, 0]}>
+                      <LabelList dataKey="fixtures" position="insideRight" fill={barLabelFill} fontSize={13} fontFamily="JetBrains Mono" fontWeight={700} formatter={(v: unknown) => (Number(v) > 0 ? String(v) : '')} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </SafeBoundary>
             </div>
-            <ul className="mt-2 flex gap-5 text-sm text-soft">
-              <li className="flex items-center gap-2"><span className="size-3.5 rounded-full bg-ok" aria-hidden />Pass</li>
-              <li className="flex items-center gap-2"><span className="size-3.5 rounded-full bg-bad" aria-hidden />Fail</li>
-            </ul>
           </div>
         </Reveal>
       </div>
@@ -184,13 +152,13 @@ export default function Evidence() {
           </div>
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Test fixtures table">
             <table className="w-full min-w-[720px] text-left">
-              <caption className="sr-only">Test fixtures with category, expected outcome and result. Synthetic demo data.</caption>
+              <caption className="sr-only">Fixture catalog expectations. No per-fixture execution results are attached.</caption>
               <thead>
                 <tr className="border-b-2 border-line font-mono text-xs uppercase tracking-wider text-soft">
                   <th scope="col" className="px-6 py-3 font-medium">Name</th>
                   <th scope="col" className="px-4 py-3 font-medium">Category</th>
                   <th scope="col" className="px-4 py-3 font-medium">Expected</th>
-                  <th scope="col" className="px-6 py-3 font-medium">Result</th>
+                  <th scope="col" className="px-6 py-3 font-medium">Execution record</th>
                 </tr>
               </thead>
               <tbody>
@@ -200,16 +168,10 @@ export default function Evidence() {
                       <th scope="row" className="px-6 py-3.5 font-normal">
                         <span className="mr-3 font-mono text-xs text-soft">{r.id}</span>
                         {r.name}
-                        {r.note && <span className="mt-0.5 block pl-[3.75rem] text-sm text-soft">{r.note}</span>}
                       </th>
                       <td className="px-4 py-3.5 text-soft">{r.category}</td>
                       <td className="px-4 py-3.5 font-mono text-sm">{r.expected}</td>
-                      <td className="px-6 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full border-2 px-2.5 py-0.5 font-mono text-xs font-bold uppercase tracking-wider ${r.result === 'Pass' ? 'border-ok text-ok' : 'border-bad bg-bad/10 text-bad'}`}>
-                          {r.result === 'Pass' ? <Check className="size-3.5" aria-hidden /> : <X className="size-3.5" aria-hidden />}
-                          {r.result}
-                        </span>
-                      </td>
+                      <td className="px-6 py-3.5 font-mono text-xs uppercase tracking-wider text-soft">Not attached</td>
                     </motion.tr>
                   ))}
                 </AnimatePresence>

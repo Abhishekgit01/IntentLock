@@ -1,8 +1,8 @@
 import type { Fixture } from "./fixtureTypes";
 
 /**
- * 42 fixtures compiled from docs/fixtures/catalog.json.
- * Verified against local Anvil chain 31337 and Foundry test suite.
+ * 40 expected-behavior fixtures from docs/fixtures/catalog.json.
+ * The entries define expectations; they are not execution results.
  * Every count shown in the UI is computed from this array.
  */
 export const FIXTURES: Fixture[] = [
@@ -748,43 +748,4 @@ export const FIXTURES: Fixture[] = [
       "vault and target state remain unchanged"
     ]
   },
-  {
-    "id": "Q01",
-    "critical": false,
-    "category": "pq",
-    "kind": "attack",
-    "title": "PQ hybrid mode: attacker holds ECDSA keys but no PQ keys",
-    "setup": "Enable PQ mode on registry; configure verifiers with both ECDSA and PQ keys; attacker possesses all ECDSA keys but no valid PQ keys.",
-    "action": "Attempt submission or execution without valid PQ signatures.",
-    "decision": "ATTEST",
-    "workflowStatus": "EXECUTION_FAILED",
-    "executionSucceeds": false,
-    "outcome": "BLOCKED",
-    "expectedRevertProposed": "PQVerificationFailed",
-    "assertions": [
-      "threshold requires both ECDSA and PQ signatures when PQ mode is enabled",
-      "missing or invalid PQ signatures cause submission and guard rejection with PQVerificationFailed",
-      "Safe balance and nonce remain unchanged"
-    ]
-  },
-  {
-    "id": "Q02",
-    "critical": false,
-    "category": "pq",
-    "kind": "benign",
-    "title": "PQ hybrid mode: valid hybrid ECDSA and PQ signatures execute",
-    "setup": "Enable PQ mode on registry; configure 3 verifiers with ECDSA and ML-DSA-44 keys; threshold is 2-of-3.",
-    "action": "Submit 2 valid ECDSA signatures paired with 2 valid ML-DSA-44 signatures over identical typed digest; execute Safe transfer.",
-    "decision": "ATTEST",
-    "workflowStatus": "EXECUTED",
-    "executionSucceeds": true,
-    "outcome": "EXECUTED",
-    "expectedRevertProposed": null,
-    "assertions": [
-      "2-of-3 hybrid threshold satisfied",
-      "Safe transfer executes",
-      "Safe balance decreases and recipient balance increases",
-      "Safe nonce increments"
-    ]
-  }
 ];

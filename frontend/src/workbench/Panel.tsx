@@ -1,5 +1,18 @@
-import { useRef, type KeyboardEvent } from "react";
-import { ArrowRight, ChevronLeft, Play, RotateCcw, ShieldCheck, ShieldOff, X } from "lucide-react";
+import { useRef, useState, type KeyboardEvent } from "react";
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  Copy,
+  Download,
+  ExternalLink,
+  Pause,
+  Play,
+  RotateCcw,
+  ShieldCheck,
+  ShieldOff,
+  X,
+} from "lucide-react";
 import { outcomeOf } from "./engine";
 import {
   BREAKS,
@@ -13,6 +26,7 @@ import {
   type ScenarioId,
 } from "./scenes";
 import type { Workbench } from "./useWorkbench";
+import type { ReplayRunKey } from "../replay";
 
 const NODE_ORDER: NodeId[] = [
   "proposal",
@@ -42,11 +56,30 @@ function shortHash(value: string | null | undefined) {
 
 export function Panel({ wb }: { wb: Workbench }) {
   const tabs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [copiedScript, setCopiedScript] = useState(false);
+  const [copiedRpcIndex, setCopiedRpcIndex] = useState<number | null>(null);
   const guarded = wb.mode === "guarded";
   const running = wb.runStatus === "running";
   const pct = wb.runStatus === "idle" ? 0 : Math.min(100, (wb.elapsedMs / wb.durationMs) * 100);
   const activeScenario = wb.ref.kind === "scenario" ? wb.ref.id : null;
   const d = wb.derived;
+
+  function handleDownloadRunJson() {
+    window.open("/run.json", "_blank");
+  }
+
+  function handleCopyScript() {
+    const cmd = wb.replayData?.reproduceScript || "export $(cat .env.local | xargs) && forge test --match-contract BybitReplaySliceTest -vvv";
+    navigator.clipboard.writeText(cmd);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 2000);
+  }
+
+  function handleCopyRpc(idx: number, text: string) {
+    navigator.clipboard.writeText(text);
+    setCopiedRpcIndex(idx);
+    setTimeout(() => setCopiedRpcIndex(null), 2000);
+  }
 
   function onTabKey(e: KeyboardEvent, i: number) {
     const last = SCENARIOS.length - 1;
@@ -80,6 +113,105 @@ export function Panel({ wb }: { wb: Workbench }) {
           Same payload, two wallets. Flip the guard and watch what changes.
         </p>
       </header>
+
+      {/* Bybit Exploit Replay Run Switcher */}
+      <section aria-labelledby="wb-replay-runs">
+        <div className="flex items-center justify-between">
+          <h2 id="wb-replay-runs" className={eyebrow}>
+            Replay · Mainnet fork
+          </h2>
+          <span className="rounded border border-[#7ACB8A]/40 bg-[#7ACB8A]/10 px-2 py-0.5 font-mono text-[10px] font-bold text-[#7ACB8A]">
+            FORK BLOCK #21,895,237
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-[#a89f90]">
+          Bybit Safe exploit transaction replayed on local Anvil fork.
+        </p>
+
+        <div role="radiogroup" aria-label="Replay run switcher" className="mt-3 grid gap-2">
+          {[
+            {
+              key: "runA" as ReplayRunKey,
+              label: "Run A · Real Bybit Safe",
+              sub: "Unguarded Safe 1.1.1 · slot 0 hijacked to malicious impl",
+              outcome: "DRAINED",
+            },
+            {
+              key: "runB" as ReplayRunKey,
+              label: "Run B · Our Safe 1.4.1 (unguarded)",
+              sub: "Same payload shape · slot 0 hijacked without guard",
+              outcome: "DRAINED",
+            },
+            {
+              key: "runC" as ReplayRunKey,
+              label: "Run C · Our Safe + IntentLock",
+              sub: "same payload shape blocked on a guard-capable Safe",
+              outcome: "BLOCKED",
+            },
+          ].map((r) => {
+            const active = wb.activeReplayRun === r.key;
+            return (
+              <button
+                key={r.key}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => wb.chooseReplayRun(r.key)}
+                className={`w-full rounded-xl border px-3.5 py-2.5 text-left transition-colors ${
+                  active
+                    ? "border-[#FF5B14] bg-[#FF5B14]/12 shadow-[0_0_12px_rgba(255,91,20,0.15)]"
+                    : "border-[#2f2922] bg-[#14110e] hover:border-[#5a4d3f]"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-sm font-bold uppercase tracking-tight text-[#F5EEDF]">
+                    {r.label}
+                  </span>
+                  <span
+                    className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                      r.outcome === "BLOCKED"
+                        ? "border-[#7ACB8A] text-[#7ACB8A]"
+                        : "border-[#ff6a5e] text-[#ff6a5e]"
+                    }`}
+                  >
+                    {r.outcome}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-[#a89f90]">{r.sub}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Play/pause and Step scrubber */}
+        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-[#2f2922] bg-[#14110e] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={wb.togglePlayPause}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#FF5B14] px-4 py-1.5 text-xs font-bold text-[#120f0c] transition-colors hover:bg-[#ff7a3a]"
+            >
+              {running ? <Pause className="size-3.5" /> : <Play className="size-3.5 fill-current" />}
+              {running ? "Pause" : "Play Run"}
+            </button>
+            <span className="font-mono text-xs text-[#a89f90]">
+              {(wb.elapsedMs / 1000).toFixed(2)}s / {(wb.durationMs / 1000).toFixed(2)}s
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="range"
+              min={0}
+              max={wb.durationMs}
+              value={wb.elapsedMs}
+              onChange={(e) => wb.scrubElapsed(Number(e.target.value))}
+              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#2a241d] accent-[#FF5B14]"
+              aria-label="Replay step scrubber"
+            />
+          </div>
+        </div>
+      </section>
 
       {/* 1. guard toggle */}
       <section aria-labelledby="wb-guard">
@@ -511,6 +643,90 @@ export function Panel({ wb }: { wb: Workbench }) {
             </div>
           </div>
         )}
+      </section>
+      {/* 7. RPC method log */}
+      <section aria-labelledby="wb-rpc-log">
+        <div className="flex items-center justify-between">
+          <h2 id="wb-rpc-log" className={eyebrow}>
+            7 · RPC method log
+          </h2>
+          <a
+            href="https://etherscan.io/tx/0x46deef0f52e3a983b67abf4714448a41dd7ffd6d32d32da69d62081c68ad7882"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-[#FF5B14] hover:underline"
+          >
+            Etherscan
+            <ExternalLink className="size-3" />
+          </a>
+        </div>
+        <p className="mt-1 text-xs text-[#a89f90]">
+          Real RPC requests made to mainnet archive to verify contracts and state.
+        </p>
+
+        <div className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-[#2f2922] bg-[#14110e] p-2.5 [scrollbar-width:thin]">
+          {wb.replayData?.rpcMethodLog ? (
+            <ul className="grid gap-2">
+              {wb.replayData.rpcMethodLog.map((log, idx) => {
+                const isCopied = copiedRpcIndex === idx;
+                const copyText = `${log.method}(${JSON.stringify(log.params)})\nResponse Hash: ${log.responseHash}`;
+                return (
+                  <li
+                    key={idx}
+                    className="flex flex-col gap-1 rounded-lg border border-[#26201a] bg-[#0c0a08] p-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[11px] font-bold text-[#F5EEDF]">
+                        {log.method}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyRpc(idx, copyText)}
+                        className="inline-flex items-center gap-1 font-mono text-[10px] text-[#a89f90] hover:text-[#FF5B14]"
+                      >
+                        {isCopied ? <Check className="size-3 text-[#7ACB8A]" /> : <Copy className="size-3" />}
+                        {isCopied ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <span className="font-mono text-[10px] text-[#8a8071] break-all">
+                      Hash: {log.responseHash}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-xs text-[#8a8071]">not captured</p>
+          )}
+        </div>
+      </section>
+
+      {/* 8. export & reproduce */}
+      <section aria-labelledby="wb-reproduce">
+        <h2 id="wb-reproduce" className={eyebrow}>
+          8 · Export & reproduce
+        </h2>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadRunJson}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#3a332b] bg-[#14110e] px-3 py-2.5 text-xs font-bold text-[#F5EEDF] transition-colors hover:border-[#FF5B14]"
+          >
+            <Download className="size-3.5" />
+            run.json
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyScript}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#3a332b] bg-[#14110e] px-3 py-2.5 text-xs font-bold text-[#F5EEDF] transition-colors hover:border-[#FF5B14]"
+          >
+            {copiedScript ? <Check className="size-3.5 text-[#7ACB8A]" /> : <Copy className="size-3.5" />}
+            {copiedScript ? "Copied script" : "Reproduce script"}
+          </button>
+        </div>
+        <p className="mt-2 text-[11px] text-[#8a8071]">
+          Run locally: <code className="rounded bg-[#1a1510] px-1 py-0.5 font-mono text-[10px] text-[#d8cfbf]">forge test --match-contract BybitReplaySliceTest</code>
+        </p>
       </section>
     </div>
   );

@@ -139,11 +139,12 @@ export interface CastCommand {
   cmd: string
 }
 export function castCommands(r: Receipt): CastCommand[] {
-  const tx = r.txHash ?? '<txHash>'
+  if (r.source !== 'chain' || !r.txHash || r.blockNumber === undefined) return []
+  const tx = r.txHash
   const rpc = `--rpc-url ${CHAIN.rpcUrl}`
   return [
     { label: 'Receipt', cmd: `cast receipt ${tx} ${rpc}` },
     { label: 'Re-run the trace', cmd: `cast run ${tx} ${rpc}` },
-    { label: 'Read storage slot 0', cmd: `cast storage ${CHAIN.vaultAddress} ${CHAIN.slotZero} --block ${r.blockNumber ?? CHAIN.block} ${rpc}` },
+    { label: 'Read storage slot 0', cmd: `cast storage ${CHAIN.vaultAddress} ${CHAIN.slotZero} --block ${r.blockNumber} ${rpc}` },
   ]
 }

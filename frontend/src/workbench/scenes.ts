@@ -35,7 +35,7 @@ export interface GuardCheck {
 }
 export interface RevertInfo {
   name: RevertName
-  /** 4-byte selector. Mock values start with 0xMOCK. */
+  /** 4-byte selector. Synthetic selectors use the invalid-hex 0xMOCK prefix. */
   selector: string
   args: string[]
 }
@@ -107,7 +107,7 @@ export interface BreakDef {
 
 export type RunRef = { kind: 'scenario'; id: ScenarioId } | { kind: 'break'; id: BreakId }
 
-export const BADGES = ['SYNTHETIC LOCAL CHAIN', 'MOCK DATA'] as const
+export const BADGES = ['SYNTHETIC SCENE', 'MOCK DATA · NO TRANSACTIONS SENT'] as const
 
 export const PROPOSAL = { title: 'Transfer 0.1 ETH to cold wallet', tag: 'UNTRUSTED' } as const
 
@@ -131,12 +131,12 @@ export const STATUS_WORDS: Record<Status, string> = {
 }
 
 export const STAMP_TEXT: Record<StampKind, { title: string; sub: string }> = {
-  revert: { title: 'REVERT', sub: 'state unchanged' },
-  ok: { title: 'EXECUTED', sub: 'every check passed' },
-  drained: { title: 'DRAINED', sub: 'nothing checked it' },
+  revert: { title: 'WOULD REVERT', sub: 'simulated state unchanged' },
+  ok: { title: 'WOULD EXECUTE', sub: 'simulated checks passed' },
+  drained: { title: 'SIMULATED DRAIN', sub: 'unguarded scenario' },
 }
 
-/* ---------- mock identifiers: every mock hash, selector and address starts with 0xMOCK ---------- */
+/* ---------- mock identifiers: synthetic identifiers are deliberately invalid hex and start with 0xMOCK ---------- */
 
 function xmur3(str: string) {
   let h = 1779033703 ^ str.length
@@ -157,13 +157,13 @@ export function mockHex(seed: string, len: number): string {
   return out.slice(0, len)
 }
 /** 32-byte deterministic hex hash. */
-export const mockHash = (seed: string) => `0x${mockHex(seed, 64)}`
+export const mockHash = (seed: string) => `0xMOCK${mockHex(seed, 58)}`
 /** 20-byte deterministic address. */
-export const mockAddr = (seed: string) => `0x${mockHex(seed, 40)}`
+export const mockAddr = (seed: string) => `0xMOCK${mockHex(seed, 34)}`
 /** 4-byte selector. */
-export const mockSelector = (seed: string) => `0x${mockHex(seed, 8)}`
+export const mockSelector = (seed: string) => `0xMOCK${mockHex(seed, 2)}`
 
-export const DEFAULT_SOURCE: Source = 'chain'
+export const DEFAULT_SOURCE: Source = 'mock'
 
 export const CHAIN = {
   rpcUrl: 'http://127.0.0.1:8545',
@@ -171,25 +171,24 @@ export const CHAIN = {
   guardAddress: '0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82',
   registryAddress: '0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0',
   slotZero: '0x0',
-  /** the block every run lands in, and how many recent blocks the 3D row shows */
-  block: 10,
+  /** number of decorative blocks in the simulated scene */
   blocksShown: 5,
   calldataSelector: '0x6a761202',
 }
 
 export const BLOCK_OUTCOME_TEXT: Record<BlockOutcome, string> = {
-  reverted: 'REVERTED (guard)',
-  included: 'INCLUDED',
-  drained: 'INCLUDED (no guard)',
+  reverted: 'WOULD REVERT (guard)',
+  included: 'WOULD INCLUDE',
+  drained: 'WOULD INCLUDE (no guard)',
 }
 
 export const INSPECTOR_TABS = ['Checks', 'Revert', 'Calldata', 'Digest', 'State', 'Trace'] as const
 export type InspectorTab = (typeof INSPECTOR_TABS)[number]
 
 const ADDR = {
-  cold: { short: '0x71C7…e4A1', full: '0x71C7656EC7ab88b098defB751B7401B5f6d8e4A1' },
-  attacker: { short: '0x9f3A…c1d0', full: '0x9f3A22b7d41cE05a8Bb6D3c9017e5fA2c4D0c1d0' },
-  malicious: { short: '0xBAD0…5e1c', full: '0xBAD0c0de5a7e1f3b9d2c48E6a07f19d3bC905e1c' },
+  cold: { short: '0xMOCK…C01D', full: '0xMOCK000000000000000000000000000000000001' },
+  attacker: { short: '0xMOCK…A771', full: '0xMOCK000000000000000000000000000000000002' },
+  malicious: { short: '0xMOCK…BAD0', full: '0xMOCK000000000000000000000000000000000003' },
 }
 
 const WEI = { zero: '0', tenth: '016345785d8a0000', ten: '8ac7230489e80000' }
@@ -204,7 +203,7 @@ const e = (t: number, node: NodeId, status: Status, label: string, extra: Partia
   ...extra,
 })
 
-/* ---------- receipts: what the chain reports once a transaction lands ---------- */
+/* ---------- synthetic receipt-shaped scene data; no transaction is sent ---------- */
 
 export const CHECK_NAMES = [
   'Operation is a plain CALL',
@@ -217,31 +216,29 @@ const checks = (...s: CheckStatus[]): GuardCheck[] => CHECK_NAMES.map((name, i) 
 const REVERTS = {
   UnsupportedOperation: (op: string): RevertInfo => ({
     name: 'UnsupportedOperation',
-    selector: '0x5109f2d1',
+    selector: '0xMOCK01',
     args: [`operation = ${op}`],
   }),
   ThresholdNotMet: (have: number): RevertInfo => ({
     name: 'ThresholdNotMet',
-    selector: '0x028c5040',
+    selector: '0xMOCK02',
     args: [`have = ${have}`, 'need = 2'],
   }),
   DigestMismatch: (seed: string): RevertInfo => ({
     name: 'DigestMismatch',
-    selector: '0x600f6b40',
+    selector: '0xMOCK03',
     args: [`expected = ${mockHash('approved:' + seed)}`, `actual = ${mockHash('actual:' + seed)}`],
   }),
   AlreadyConsumed: (seed: string): RevertInfo => ({
     name: 'AlreadyConsumed',
-    selector: '0x0ebc8ea6',
+    selector: '0xMOCK04',
     args: [`digest = ${mockHash('approved:' + seed)}`],
   }),
 }
 
-const tx = (seed: string, gasUsed: number, outcome: BlockOutcome, extra: Partial<SceneEvent>): Partial<SceneEvent> => ({
+const tx = (seed: string, _unusedGas: number, outcome: BlockOutcome, extra: Partial<SceneEvent>): Partial<SceneEvent> => ({
   txHash: mockHash('tx:' + seed),
-  blockNumber: CHAIN.block,
-  gasUsed,
-  source: 'chain',
+  source: 'mock',
   blockOutcome: outcome,
   ...extra,
 })
@@ -298,7 +295,7 @@ const PAYLOADS: Record<ScenarioId, PayloadFields> = {
 const attestation = (seed: string): Attestation => ({
   intentHash: mockHash('intent:' + seed),
   policyHash: mockHash('policy:v1'),
-  validUntil: `block ${CHAIN.block + 120}`,
+  validUntil: 'simulated expiry · +120 blocks',
   signer: mockAddr('verifier-a'),
 })
 
@@ -663,7 +660,7 @@ export const NODE_INFO: Record<NodeId, NodeInfo> = {
   payload: {
     short: 'Payload',
     title: 'Payload crate',
-    what: 'The raw transaction that would actually execute on chain.',
+    what: 'The payload encoded in this illustrative transaction scenario.',
     checks: 'Nothing itself. Verifiers decode it and the gate inspects it.',
   },
   verifierA: {

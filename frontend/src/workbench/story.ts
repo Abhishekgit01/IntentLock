@@ -11,7 +11,7 @@ export type ActId = 'attack' | 'defense' | 'proof' | 'future'
 export const SHELL = {
   tablistLabel: 'Workbench acts',
   backLabel: 'Back to demo',
-  badges: ['LOCAL ANVIL CHAIN 31337', 'VERIFIED EXECUTION EVIDENCE'],
+  badges: ['SYNTHETIC SCENE', 'MOCK DATA · NO TRANSACTIONS SENT'],
   acts: [
     { id: 'attack', label: '1 Attack' },
     { id: 'defense', label: '2 Defense' },
@@ -78,7 +78,7 @@ export const ATTACK = {
     attacker: { label: 'attacker', value: '0xBAD0…5e1c' },
     balanceLabel: 'vault balance',
     unit: 'ETH',
-    synthetic: 'LOCAL ANVIL',
+    synthetic: 'SYNTHETIC SCENE',
     drainMs: 2600,
   },
   controls: {
@@ -188,7 +188,7 @@ export const PROOF = {
     noRevert: 'None. This fixture is not expected to revert.',
     assertions: 'Assertions',
   },
-  footer: 'Counts computed from the 42-fixture catalog verified on Anvil chain 31337 and Foundry.',
+  footer: 'Illustrative scenarios only. Fixture outcomes are not execution evidence.',
   fits: {
     title: 'Where IntentLock fits',
     intro: 'Four approaches, grouped by what they do at signing or execution time.',
