@@ -120,7 +120,7 @@
       "assertions": [
         "UI label is not part of or authority for the digest",
         "verifier refusal yields no signature",
-        "guard rejects absent threshold record"
+        "no Safe execution is submitted after the policy refusal"
       ],
       "kind": "attack",
       "attemptedOnchain": false,
