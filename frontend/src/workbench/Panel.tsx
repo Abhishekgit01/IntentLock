@@ -528,6 +528,36 @@ export function Panel({ wb }: { wb: Workbench }) {
               <p className="mt-2 text-[13px] leading-snug text-[#F5EEDF]">
                 {wb.liveBackend.proposal.decoded.summary}
               </p>
+              {wb.liveBackend.proposal.explanation && (
+                <div className="mt-2.5 rounded-xl border border-[#FF5B14]/40 bg-[#FF5B14]/10 p-3 text-left">
+                  <div className="flex items-center justify-between gap-1.5 font-mono text-[10.5px] font-bold uppercase tracking-wider text-[#FF5B14]">
+                    <span className="flex items-center gap-1.5">
+                      <span className="size-2 rounded-full bg-[#FF5B14] animate-pulse" />
+                      Plain English Security Analysis
+                    </span>
+                    <span className="text-[9.5px] text-[#a89f90]">
+                      {wb.liveBackend.proposal.explanation.source === "ollama" ? `AI (${wb.liveBackend.proposal.explanation.aiModel || "Ollama"})` : "Deterministic Engine"}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 font-sans text-[12px] font-medium leading-relaxed text-[#F5EEDF]">
+                    {wb.liveBackend.proposal.explanation.summary}
+                  </p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-[#d8cfbf]">
+                    <span className="font-semibold text-[#a89f90]">Intent vs Calldata: </span>
+                    {wb.liveBackend.proposal.explanation.intentVsCalldata}
+                  </p>
+                  {wb.liveBackend.proposal.explanation.bulletPoints && wb.liveBackend.proposal.explanation.bulletPoints.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-[11px] text-[#a89f90]">
+                      {wb.liveBackend.proposal.explanation.bulletPoints.map((bp: string, i: number) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="font-bold text-[#FF5B14]">›</span>
+                          <span>{bp}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
               <dl className="mt-2 grid gap-1.5 text-[11px]">
                 <dt className="text-[#a89f90]">Safe transaction hash · API computed</dt>
                 <dd className="break-all font-mono text-[#d8cfbf]">

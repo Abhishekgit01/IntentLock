@@ -117,6 +117,15 @@ export interface LiveProposal {
   };
   source: { kind: string; blockNumber: string; blockHash: string };
   eventsUrl: string;
+  explanation?: {
+    summary: string;
+    riskLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
+    verdict: "BLOCKED_MALICIOUS" | "POLICY_VIOLATION" | "UNSUPPORTED_REJECTED" | "SAFE_TO_EXECUTE";
+    intentVsCalldata: string;
+    bulletPoints: string[];
+    aiModel: string | null;
+    source: "ollama" | "deterministic_guard_engine";
+  } | null;
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {

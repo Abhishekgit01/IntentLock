@@ -7,6 +7,7 @@ import {
   DECODER_VERSION,
 } from './policy.js';
 import { appendEvent } from './events.js';
+import { explainTransaction } from './explainer.js';
 
 const UINT256_MAX = (1n << 256n) - 1n;
 
@@ -196,6 +197,7 @@ function toPublicProposal(proposal, config) {
       blockNumber: proposal.decoded.source.blockNumber,
       blockHash: proposal.decoded.source.blockHash,
     },
+    explanation: proposal.explanation ?? null,
     eventsUrl: `/v1/proposals/${proposal.proposalId}/events`,
   };
 }
@@ -238,6 +240,13 @@ export function createProposalService({ client, config, store }) {
         safeTxHash,
         policyHash,
       });
+      const explanation = await explainTransaction({
+        transaction,
+        decision: decoded.decision,
+        decoded,
+        policy: config,
+        refusalReason: decoded.reasonCode,
+      });
       return {
         decision: decoded.decision,
         decodeStatus: decoded.decodeStatus,
@@ -249,6 +258,7 @@ export function createProposalService({ client, config, store }) {
         decoderVersion: DECODER_VERSION,
         source: decoded.source,
         signingPerformed: false,
+        explanation,
       };
     },
     getPublicProposal(proposalId) {
@@ -376,6 +386,14 @@ export function createProposalService({ client, config, store }) {
       }
       proposal.decoded = decoded;
       proposal.workflowStatus = decoded.workflowStatus;
+      const explanation = await explainTransaction({
+        transaction,
+        decision: decoded.decision,
+        decoded,
+        policy: config,
+        refusalReason: decoded.reasonCode,
+      });
+      proposal.explanation = explanation;
       lastEvent = appendEvent(
         proposal,
         'decode.completed',

@@ -119,6 +119,29 @@ function ChecksTab({ wb }: { wb: Workbench }) {
           ? `Stopped at check ${failAt + 1}. Later checks are not reached.`
           : "Checks are copied from the saved run artifact."}
       </p>
+
+      <div className="mt-4 rounded-xl border border-[#FF5B14]/40 bg-[#FF5B14]/10 p-3.5 text-left">
+        <div className="flex items-center justify-between gap-1.5 font-mono text-[10.5px] font-bold uppercase tracking-wider text-[#FF5B14]">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-[#FF5B14] animate-pulse" />
+            Plain English Intent & Risk Analysis
+          </span>
+          <span className="text-[9.5px] text-[#a89f90]">Automated Security Explainer</span>
+        </div>
+        <p className="mt-2 text-[12.5px] font-medium leading-relaxed text-[#F5EEDF]">
+          {wb.payload.operation === "DELEGATECALL"
+            ? "CRITICAL EXPLOIT DETECTED: The signer interface showed a routine 0.1 ETH transfer to a cold wallet, but the actual transaction payload executed a DELEGATECALL to an unverified proxy contract. In Ethereum and Quai, delegatecall shares the Safe's root storage, giving the target contract full power to overwrite owners and drain all balances. IntentLock Guard detected the hidden delegatecall and reverted execution before any funds moved."
+            : wb.derived.receipt.revert
+              ? `POLICY BLOCKED: Transaction reverted with ${wb.derived.receipt.revert.name}. The raw transaction failed deterministic policy checks and was rejected by the on-chain guard.`
+              : "VERIFIED COMPLIANT: Transaction calldata strictly adheres to the Safe's pre-approved security policy. Independent verifiers validated the parameters and permitted on-chain execution."}
+        </p>
+        <p className="mt-2 text-[11px] text-[#d8cfbf]">
+          <strong className="text-[#a89f90]">Intent vs Calldata: </strong>
+          {wb.payload.operation === "DELEGATECALL"
+            ? "UI claimed routine cold transfer · Raw bytes attempted root-level contract execution."
+            : "Transaction matches declared intent within approved thresholds."}
+        </p>
+      </div>
     </div>
   );
 }

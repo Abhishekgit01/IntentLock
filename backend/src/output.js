@@ -109,9 +109,24 @@ export function formatOutput(payload, {
     if (cleanData.nextAction) lines.push(`${bold('Next action:')} ${JSON.stringify(cleanData.nextAction)}`);
     if (cleanData.evidence) lines.push(`${bold('Evidence:')}    ${JSON.stringify(cleanData.evidence)}`);
 
+    if (cleanData.explanation) {
+      const exp = cleanData.explanation;
+      const modelTag = exp.source === 'ollama' ? `AI (${exp.aiModel || 'Ollama'})` : 'Deterministic Guard Engine';
+      lines.push('');
+      lines.push(bold(`[Plain English Security Analysis] · ${modelTag}`));
+      lines.push(`${bold('Verdict:')}   ${exp.verdict} (Risk: ${exp.riskLevel})`);
+      lines.push(`${bold('Summary:')}   ${exp.summary}`);
+      lines.push(`${bold('Calldata:')}  ${exp.intentVsCalldata}`);
+      if (exp.bulletPoints?.length) {
+        lines.push(bold('Key Points:'));
+        exp.bulletPoints.forEach((bp) => lines.push(`  • ${bp}`));
+      }
+      lines.push('');
+    }
+
     // Output all remaining keys
     for (const [k, v] of Object.entries(cleanData)) {
-      if (!['target', 'observed', 'decision', 'nextAction', 'evidence'].includes(k)) {
+      if (!['target', 'observed', 'decision', 'nextAction', 'evidence', 'explanation'].includes(k)) {
         lines.push(`${bold(k + ':')} ${typeof v === 'object' ? '\n' + JSON.stringify(v, null, 2) : v}`);
       }
     }

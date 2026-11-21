@@ -8,6 +8,7 @@ import { executeProposalOnchain } from './execution.js';
 import { subscribe } from './events.js';
 import { compilePolicyFile, lintPolicyDraft } from './policy-format.js';
 import { DECODER_VERSION } from './policy.js';
+import { explainTransaction } from './explainer.js';
 
 function apiError(statusCode, code, message) {
   const error = new Error(message);
@@ -199,6 +200,19 @@ export function buildApp(config) {
   app.post('/decode', async (request) =>
     proposalService.decodeRaw(request.body),
   );
+
+  app.post('/v1/explain', async (request) => {
+    const body = request.body || {};
+    const transaction = body.transaction || body;
+    const explanation = await explainTransaction({
+      transaction,
+      decision: body.decision,
+      decoded: body.decoded,
+      policy: config,
+      refusalReason: body.refusalReason,
+    });
+    return { ok: true, explanation };
+  });
 
   app.get('/v1/config', async () => proposalService.getConfigView());
 
