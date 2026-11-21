@@ -59,6 +59,8 @@ The policy JSON shape is specified by [`docs/policy.schema.json`](../docs/policy
 
 ## CLI
 
+The command line interface is currently a development prototype. Its production target and acceptance requirements are specified in [docs/CLI_PRODUCTION_SPEC.md](../docs/CLI_PRODUCTION_SPEC.md); that document is a build plan, not a claim that the current CLI satisfies the requirements.
+
 Start the interactive prompt with `npm run intentlock --`. You can then type `health`, `policy validate policy.json`, `decode transaction.json`, or `help` at the `intentlock>` prompt. Type `exit` or press Ctrl-D to close it. From a regular shell, run a one-shot command with the npm separator, for example `npm run intentlock -- health`.
 
 ```sh
