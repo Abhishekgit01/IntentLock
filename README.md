@@ -29,6 +29,56 @@ Orchard is a public test network. Test tokens have no intended real-world value.
 
 The policy decision (`ATTEST`, `ATTEST_WITH_TIMELOCK`, `REFUSE_UNSUPPORTED`, or `REFUSE_POLICY`) is distinct from workflow status and execution results. See the [protocol](docs/PROTOCOL.md) and [contract specification](docs/CONTRACTS.md) for exact fields and checks.
 
+## Product features
+
+| Surface | What it does | Evidence boundary |
+| --- | --- | --- |
+| **Policy Studio** (`/onboard`) | Drafts and edits policy JSON, validates its schema, calls the deterministic compiler and linter, displays the policy hash, and dry-runs raw transaction fields through the decoder. | Preview mode is labeled. A policy draft does not sign or authorize transactions. |
+| **3D Workbench** (`/workbench`) | Animates the transaction and verifier story, provides an inspector, and includes a separate live-backend panel for configured Safe state and raw transaction analysis. | The scripted scene is illustrative and labeled synthetic; its animation is not a chain transaction. The live panel reports RPC/API data separately. |
+| **Evidence and Replay** (`/evidence`, `/replay`) | Presents saved run artifacts, deployment data, recorded transaction details, and reproducible commands when those fields were captured. | Historical Bybit observations, local Foundry runs, and live chain receipts are distinct sources. Missing data is not inferred. |
+| **Verifier and lifecycle views** (`/verifiers`, `/lifecycle`) | Shows verifier configuration and proposal lifecycle information provided by the app/backend. | API workflow status is not itself a chain event or execution receipt. |
+| **Demo and threat pages** (`/demo`, `/threats`) | Introduces the demo flow and summarizes the threat scenarios covered by the project. | A scenario description is not evidence that an incident was prevented. |
+| **Interactive CLI** | Offers health checks, policy tools, raw transaction decoding, proposal workflows, Safe signing, verifier attestations, execution requests, and conformance checks. | See [CLI commands](#command-line-interface) and the detailed [backend guide](backend/README.md). |
+| **Post-quantum signature experiment** | Generates and verifies an off-chain ECDSA plus ML-DSA-65 envelope over the existing attestation digest. | This is not used by the Registry or Guard. On-chain authorization remains ECDSA-based; the project does not claim quantum-resistant execution. |
+
+## Command-line interface
+
+Start the interactive prompt from `backend/`:
+
+```sh
+cd backend
+npm run intentlock
+```
+
+Type `help` inside `intentlock>`. The available command groups are:
+
+| Command | Purpose |
+| --- | --- |
+| `health`, `doctor`, `context` | Read API health, diagnose API/RPC/Safe/policy readiness, and inspect live Safe context. |
+| `keygen` | Create a local disposable key file; private key material is not printed. |
+| `policy validate`, `policy compile`, `policy lint` | Validate policy shape, produce canonical policy/hash output, and report policy draft issues. |
+| `decode` | Submit raw Safe transaction fields to the verifier API's dry-run endpoint. It does not sign. |
+| `proposal template`, `proposal create`, `proposal show`, `proposal watch` | Prepare a transaction template, analyze a proposal against configured RPC, inspect in-memory proposal state, and follow workflow events. |
+| `sign-safe` | Sign an `ATTEST` Safe transaction digest with a local Safe-owner key after checking owner membership. |
+| `attest` | Sign and submit one verifier attestation using a configured verifier key. |
+| `execute` | Send externally created Safe signature bytes to the backend for the configured execution flow. |
+| `conformance` | Run checked-in policy and decoder known-answer vectors against the configured verifier API. Catalog fixtures without complete transaction inputs are reported as not run. |
+| `hybrid keygen`, `hybrid sign`, `hybrid verify` | Create keys and create or verify the experimental off-chain ECDSA + ML-DSA-65 envelope. |
+
+One-shot commands use the same CLI, for example `npm run intentlock -- health` from `backend/`. Proposal and signature workflow state is in memory and is cleared when the backend restarts. Store key files locally, keep them out of commits and logs, and do not treat a successful CLI check as chain evidence unless it reports a chain read or receipt.
+
+## Post-quantum signature experiment
+
+The CLI includes a research prototype that signs the same EIP-712 attestation digest with classical ECDSA and ML-DSA-65, the digital-signature algorithm standardized in NIST FIPS 204. From `backend/`, create local keys, sign an input envelope, and verify it against the expected chain, Registry, and trusted public-key descriptor:
+
+```sh
+npm run intentlock -- hybrid keygen --out ./.intentlock-hybrid/verifier-1
+npm run intentlock -- hybrid sign attestation-input.json --keys ./.intentlock-hybrid/verifier-1 --out attestation.hybrid.json
+npm run intentlock -- hybrid verify attestation.hybrid.json --keys ./.intentlock-hybrid/verifier-1 --chain-id 31337 --registry 0xYourConfiguredRegistry
+```
+
+This experiment adds a second signature; it does not encrypt or hide the transaction hash. The hybrid envelope is not submitted to the API, Registry, or Guard, and a successful local verification is not chain authorization. Safe and IntentLock's on-chain verifier path remain ECDSA-based. The prototype is not a post-quantum protection claim; see [the full security boundary](docs/POST_QUANTUM.md).
+
 ## Local setup
 
 ### Requirements
@@ -167,6 +217,8 @@ The preflight is read-only. The deploy script is gated and must not be rerun to 
 - [Smart contract specification](docs/CONTRACTS.md)
 - [Decoder and policy](docs/DECODER_AND_POLICY.md)
 - [Threat model](docs/THREAT_MODEL.md)
+- [Post-quantum signature experiment](docs/POST_QUANTUM.md)
+- [Policy schema](docs/policy.schema.json)
 - [Verification plan](docs/VERIFICATION.md)
 - [Fixture catalog](docs/fixtures/catalog.json)
 - [Demo runbook](docs/DEMO_RUNBOOK.md)
