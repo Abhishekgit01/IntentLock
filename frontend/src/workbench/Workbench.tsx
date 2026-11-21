@@ -242,8 +242,9 @@ export default function Workbench() {
                     AI Security Intelligence
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <span className="rounded-full border border-[#FF5B14]/30 bg-[#FF5B14]/10 px-2 py-0.5 font-mono text-[9px] font-bold text-[#FF5B14]">
-                      Offline pai:latest
+                    <span className="rounded-full border border-[#7ACB8A]/40 bg-[#7ACB8A]/15 px-2.5 py-0.5 font-mono text-[9.5px] font-bold text-[#7ACB8A] flex items-center gap-1.5">
+                      <span className="size-1.5 rounded-full bg-[#7ACB8A] animate-pulse" />
+                      Online (pai:latest)
                     </span>
                     <button
                       type="button"

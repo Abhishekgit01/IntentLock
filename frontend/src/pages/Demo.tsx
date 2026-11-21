@@ -241,11 +241,11 @@ function ChainCard() {
         <div className="mt-5 rounded-2xl border-2 border-flame/40 bg-flame/10 p-4 text-on-contrast">
           <div className="flex items-center justify-between gap-2 font-mono text-[11px] font-bold uppercase tracking-wider text-flame">
             <span className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-flame animate-pulse" />
+              <span className="size-2 rounded-full bg-ok animate-pulse" />
               Automated Plain English Security Analysis
             </span>
-            <span className="rounded-full border border-flame/50 bg-flame/20 px-2 py-0.5 text-[9.5px]">
-              Offline AI · pai:latest
+            <span className="rounded-full border border-ok/50 bg-ok/15 px-2.5 py-0.5 text-[9.5px] text-ok font-bold">
+              AI Online · pai:latest
             </span>
           </div>
           <p className="mt-2 text-sm font-medium leading-relaxed text-on-contrast">

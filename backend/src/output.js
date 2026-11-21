@@ -111,7 +111,7 @@ export function formatOutput(payload, {
 
     if (cleanData.explanation) {
       const exp = cleanData.explanation;
-      const modelTag = exp.source === 'ollama' ? `AI (${exp.aiModel || 'Ollama'})` : 'Deterministic Guard Engine';
+      const modelTag = exp.source === 'ollama' ? `AI Online (${exp.aiModel || 'pai:latest'})` : 'Deterministic Guard Engine';
       lines.push('');
       lines.push(bold(`[Plain English Security Analysis] · ${modelTag}`));
       lines.push(`${bold('Verdict:')}   ${exp.verdict} (Risk: ${exp.riskLevel})`);

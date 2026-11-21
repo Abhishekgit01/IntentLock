@@ -17,11 +17,11 @@ export default function Home() {
         <div aria-hidden className="float-b absolute right-[-6rem] top-[24rem] size-56 rounded-full border-[14px] border-flame/25" />
         <div className="relative mx-auto grid max-w-[1280px] items-center gap-12 px-5 pb-28 pt-24 md:px-10 md:pt-[6.5rem] lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <div className="mb-6 inline-flex flex-wrap items-center gap-2 rounded-full border border-flame/40 bg-flame/10 px-4 py-1.5 text-xs font-mono font-bold uppercase tracking-wider text-flame">
-              <span className="size-2 rounded-full bg-flame animate-pulse" />
-              <span>Quai Orchard (Cyprus-1) Deployed</span>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-ok/40 bg-ok/10 px-4 py-1.5 text-xs font-mono font-bold uppercase tracking-wider text-ok">
+              <span className="size-2 rounded-full bg-ok animate-pulse" />
+              <span>AI Security Overview</span>
               <span className="opacity-50">·</span>
-              <span>Bybit $1.5B Attack Replay Verified (100% Blocked)</span>
+              <span>Online (pai:latest)</span>
             </div>
             <Headline
               parts={[{ t: 'Your signers clicked' }, { t: 'Confirm.', hl: true }, { t: 'The screen lied.', em: true, br: true }]}
