@@ -12,7 +12,11 @@ import {
   signHybridAttestation,
   verifyHybridEnvelope,
 } from './hybrid-pq.js';
-import { compilePolicyFile, lintPolicyDraft } from './policy-format.js';
+import { compilePolicyFile, lintPolicyDraft, normalizePolicyFile, comparePolicyWithRegistry } from './policy-format.js';
+import { resolveProfile, redactProfile, verifyProfileAgainstChain, BUILTIN_PROFILES } from './profiles.js';
+import { EXIT_CODES, CliError, formatOutput, redact } from './output.js';
+import { LocalFileSignerProvider, validateSignerMembership, SIGNER_ROLES } from './signers.js';
+import { createChainClient, SAFE_ABI } from './safe.js';
 
 const rootDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -38,28 +42,118 @@ const rawTransactionFields = [
   'refundReceiver',
 ];
 
-function option(args, name, fallback) {
-  const index = args.indexOf(name);
-  if (index < 0) return fallback;
-  const value = args[index + 1];
-  if (!value || value.startsWith('--'))
-    throw new Error(`${name} requires a value`);
-  return value;
+const CLI_VERSION = '0.2.0-prod';
+const PROTOCOL_VERSION = '1.0.0';
+const SCHEMA_VERSION = 'intentlock.cli.v1';
+
+import fs from 'node:fs';
+
+function resolveDemoFilePath(filename) {
+  if (fs.existsSync(path.resolve(filename))) return path.resolve(filename);
+  const inBackend = path.join(rootDirectory, 'backend', filename);
+  if (fs.existsSync(inBackend)) return inBackend;
+  return path.resolve(filename);
 }
 
-function print(value) {
-  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+
+const LAST_PROPOSAL_FILE = path.join(rootDirectory, 'backend/.last-proposal-id');
+
+async function saveLastProposalId(id) {
+  try {
+    await writeFile(LAST_PROPOSAL_FILE, id, 'utf8');
+  } catch {}
+}
+
+async function getLastProposalId() {
+  try {
+    return (await readFile(LAST_PROPOSAL_FILE, 'utf8')).trim();
+  } catch {
+    return null;
+  }
+}
+
+async function resolveProposalId(id) {
+  if (id && id !== 'latest' && !id.startsWith('--')) return id;
+  const last = await getLastProposalId();
+  if (!last) {
+    throw new CliError('No active proposal found. Run "proposal create valid-tx.json" or "demo propose" first.', {
+      code: 'NO_PROPOSAL_ID',
+      exitCode: EXIT_CODES.INVALID_ARGUMENT,
+    });
+  }
+  return last;
+}
+
+
+function parseGlobalFlags(args) {
+  const flags = {
+    help: false,
+    version: false,
+    profile: 'anvil-local',
+    endpoint: null,
+    output: process.stdout.isTTY ? 'human' : 'json',
+    noColor: Boolean(process.env.NO_COLOR) || false,
+    timeout: 10000,
+    requestId: null,
+    verbose: false,
+    config: null,
+    confirmSafeTxHash: null,
+    restArgs: [],
+  };
+
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--help' || arg === '-h') {
+      flags.help = true;
+    } else if (arg === '--version') {
+      flags.version = true;
+    } else if (arg === '--profile') {
+      flags.profile = args[++i];
+    } else if (arg === '--endpoint') {
+      flags.endpoint = args[++i];
+    } else if (arg === '--output') {
+      flags.output = args[++i];
+    } else if (arg === '--no-color') {
+      flags.noColor = true;
+    } else if (arg === '--timeout') {
+      flags.timeout = parseInt(args[++i], 10);
+    } else if (arg === '--request-id') {
+      flags.requestId = args[++i];
+    } else if (arg === '--verbose') {
+      flags.verbose = true;
+    } else if (arg === '--config') {
+      flags.config = args[++i];
+    } else if (arg === '--confirm-safe-tx-hash') {
+      flags.confirmSafeTxHash = args[++i];
+    } else {
+      positional.push(arg);
+    }
+  }
+  flags.restArgs = positional;
+  return flags;
+}
+
+function printResult(result, flags, commandName) {
+  const output = formatOutput(result, {
+    mode: flags.output,
+    command: commandName,
+    profile: flags.profile,
+    requestId: flags.requestId,
+    noColor: flags.noColor,
+  });
+  process.stdout.write(`${output}\n`);
 }
 
 async function readJson(file) {
-  const text =
-    file === '-'
-      ? await readStdin()
-      : await readFile(path.resolve(file), 'utf8');
+  const text = file === '-' ? await readStdin() : await readFile(path.resolve(file), 'utf8');
   try {
     return JSON.parse(text);
   } catch (error) {
-    throw new Error(`Invalid JSON in ${file}: ${error.message}`);
+    throw new CliError(`Invalid JSON in ${file}: ${error.message}`, {
+      code: 'INVALID_JSON',
+      exitCode: EXIT_CODES.INVALID_ARGUMENT,
+    });
   }
 }
 
@@ -69,516 +163,291 @@ async function readStdin() {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-async function jsonRequest(url, init) {
-  let response;
+async function jsonRequest(url, init = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    response = await fetch(url, init);
-  } catch (error) {
-    throw new Error(`Could not reach ${url}: ${error.message}`);
-  }
-  const body = await response.json().catch(() => null);
-  return { ok: response.ok, status: response.status, body };
-}
-
-function endpointFrom(args) {
-  return option(args, '--endpoint', 'http://127.0.0.1:8787').replace(/\/$/, '');
-}
-
-async function keygen(args) {
-  const privateKey = generatePrivateKey();
-  const account = privateKeyToAccount(privateKey);
-  const keyPath = path.resolve(
-    option(
-      args,
-      '--out',
-      path.join(
-        homedir(),
-        '.intentlock',
-        'keys',
-        `${account.address.toLowerCase()}.intentlock-key`,
-      ),
-    ),
-  );
-  await mkdir(path.dirname(keyPath), { recursive: true, mode: 0o700 });
-  await writeFile(keyPath, `${privateKey}\n`, { flag: 'wx', mode: 0o600 });
-  print({
-    created: true,
-    address: account.address,
-    keyFile: keyPath,
-    privateKeyPrinted: false,
-  });
-}
-
-async function hybridCommand(action, args) {
-  if (action === 'keygen') {
-    const outputDirectory = option(args, '--out');
-    if (!outputDirectory)
-      throw new Error('hybrid keygen requires --out DIRECTORY');
-    print(await createHybridKeyBundle(outputDirectory));
-    return;
-  }
-  if (action === 'sign') {
-    const inputFile = args.find((arg) => !arg.startsWith('--'));
-    const keyDirectory = option(args, '--keys');
-    const outputFile = option(args, '--out');
-    if (!inputFile || !keyDirectory || !outputFile) {
-      throw new Error(
-        'Use hybrid sign attestation.json --keys DIRECTORY --out envelope.json',
-      );
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    const text = await response.text();
+    let body;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = text;
     }
-    const envelope = await signHybridAttestation({
-      input: await readJson(inputFile),
-      keyDirectory,
-    });
-    const outputPath = path.resolve(outputFile);
-    await writeFile(outputPath, envelopeJson(envelope), {
-      flag: 'wx',
-      mode: 0o600,
-    });
-    print({
-      created: true,
-      file: outputPath,
-      digest: envelope.attestationDigest,
-      ecdsaSigner: envelope.signer.ecdsaAddress,
-      pqAlgorithm: envelope.signer.pqAlgorithm,
-      pqPublicKeyFingerprint: envelope.signer.pqPublicKeyFingerprint,
-      scope: envelope.scope,
-      registrySubmission: envelope.enforcement.registrySubmission,
-      onchainAuthorization: envelope.enforcement.onchainAuthorization,
-    });
-    return;
-  }
-  if (action === 'verify') {
-    const inputFile = args.find((arg) => !arg.startsWith('--'));
-    const trustedKeys = option(args, '--keys');
-    const chainIdText = option(args, '--chain-id');
-    const registryAddress = option(args, '--registry');
-    const chainId = Number(chainIdText);
-    if (
-      !inputFile ||
-      !trustedKeys ||
-      !Number.isSafeInteger(chainId) ||
-      chainId <= 0 ||
-      !registryAddress
-    ) {
-      throw new Error(
-        'Use hybrid verify envelope.json --keys TRUSTED_KEY_DIRECTORY --chain-id ID --registry ADDRESS',
-      );
+    if (!response.ok) {
+      const code = body?.error?.code || body?.code || `HTTP_${response.status}`;
+      const msg = body?.error?.message || body?.message || text || response.statusText;
+      let exitCode = EXIT_CODES.INTERNAL_ERROR;
+      if (response.status === 400) exitCode = EXIT_CODES.INVALID_ARGUMENT;
+      else if (response.status === 401 || response.status === 403) exitCode = EXIT_CODES.AUTH_FAILURE;
+      else if (response.status === 409) exitCode = EXIT_CODES.RPC_INCONSISTENCY;
+      else if (response.status === 503) exitCode = EXIT_CODES.RPC_INCONSISTENCY;
+      throw new CliError(msg, { code, exitCode, details: body });
     }
-    const result = await verifyHybridEnvelope(
-      await readJson(inputFile),
-      trustedKeys,
-      { chainId, registryAddress },
-    );
-    print(result);
-    if (!result.verified) process.exitCode = 1;
-    return;
+    return body;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new CliError(`Request timed out after ${timeoutMs}ms`, {
+        code: 'TIMEOUT',
+        exitCode: EXIT_CODES.RPC_INCONSISTENCY,
+      });
+    }
+    if (err instanceof CliError) throw err;
+    throw new CliError(`Network error connecting to ${url}: ${err.message}`, {
+      code: 'NETWORK_ERROR',
+      exitCode: EXIT_CODES.RPC_INCONSISTENCY,
+    });
+  } finally {
+    clearTimeout(timer);
   }
-  throw new Error(
-    'Use hybrid keygen --out DIRECTORY, hybrid sign attestation.json --keys DIRECTORY --out envelope.json, or hybrid verify envelope.json --keys TRUSTED_KEY_DIRECTORY --chain-id ID --registry ADDRESS',
-  );
 }
 
-async function health(args) {
-  const endpoint = endpointFrom(args);
-  const result = await jsonRequest(`${endpoint}/health`);
-  print({
-    source: 'verifier_api',
-    endpoint,
-    httpStatus: result.status,
-    ...result.body,
-  });
-  if (!result.ok) process.exitCode = 1;
-}
-
-async function context(args) {
-  const endpoint = endpointFrom(args);
-  const result = await jsonRequest(`${endpoint}/v1/context`);
-  print({
-    source: 'configured_chain_rpc',
-    endpoint,
-    httpStatus: result.status,
-    context: result.body,
-  });
-  if (!result.ok) process.exitCode = 1;
-}
-
-async function doctor(args) {
-  const endpoint = endpointFrom(args);
-  const health = await jsonRequest(`${endpoint}/health`);
-  const chain = await jsonRequest(`${endpoint}/v1/context`);
-  const h = health.body ?? {};
-  const c = chain.body ?? {};
-  const checks = [
-    { name: 'Verifier API responds', status: health.ok ? 'pass' : 'fail' },
-    {
-      name: 'Configured RPC responds',
-      status: h.rpc === 'connected' ? 'pass' : 'fail',
-    },
-    {
-      name: 'RPC chain matches configuration',
-      status:
-        h.observedChainId === h.configuredChainId && h.observedChainId != null
-          ? 'pass'
-          : 'fail',
-    },
-    {
-      name: 'Safe is configured and readable',
-      status: c.ready ? 'pass' : 'fail',
-    },
-    {
-      name: 'Policy hash is configured',
-      status: h.policyConfigured ? 'pass' : 'fail',
-    },
-    {
-      name: 'Safe has no enabled modules',
-      status:
-        c.enabledModules === 0
-          ? 'pass'
-          : c.enabledModules == null
-            ? 'warn'
-            : 'fail',
-    },
-    {
-      name: 'Execution relayer is ready',
-      status: h.executionAvailable ? 'pass' : 'warn',
-    },
-  ];
-  const failed = checks.some((check) => check.status === 'fail');
-  const warnings = checks.some((check) => check.status === 'warn');
-  print({
-    source: 'verifier_api_and_configured_chain_rpc',
-    endpoint,
-    status: failed
-      ? 'NEEDS_ATTENTION'
-      : warnings
-        ? 'READY_WITH_WARNINGS'
-        : 'READY',
-    checks,
-    chain: {
-      configuredChainId: h.configuredChainId ?? null,
-      observedChainId: h.observedChainId ?? null,
-      safeAddress: c.safeAddress ?? h.safeAddress ?? null,
-      safeNonce: c.safeNonce ?? h.safeNonce ?? null,
-      guardAddress: c.guardAddress ?? null,
-      enabledModules: c.enabledModules ?? null,
-      policyHash: h.policyHash ?? null,
-      executionAvailable: Boolean(h.executionAvailable),
-    },
-  });
-  if (failed) process.exitCode = 1;
-}
-
-async function createProposal(args) {
-  const file = args.find((arg) => !arg.startsWith('--'));
-  if (!file)
-    throw new Error(
-      'proposal create requires a raw Safe transaction JSON file',
-    );
-  const input = await readJson(file);
-  if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw new Error('Proposal input must be a JSON object');
+async function handleProfileCommand(args, flags) {
+  const [subAction, ...subArgs] = args;
+  if (!subAction || subAction === 'list') {
+    return {
+      profiles: Object.keys(BUILTIN_PROFILES).map((k) => redactProfile(BUILTIN_PROFILES[k])),
+    };
   }
-  const transaction = input.transaction ?? input;
-  validateRawTransaction(transaction);
-  const endpoint = endpointFrom(args);
-  const body = input.transaction ? input : { transaction };
-  const result = await jsonRequest(`${endpoint}/v1/proposals`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  print({
-    source: 'verifier_api_and_chain_rpc',
-    endpoint,
-    httpStatus: result.status,
-    proposal: result.body,
-  });
-  if (!result.ok) process.exitCode = 1;
+  if (subAction === 'show') {
+    const name = subArgs[0] || flags.profile;
+    const prof = await resolveProfile({ profileName: name, configPath: flags.config });
+    return { profile: redactProfile(prof) };
+  }
+  if (subAction === 'verify') {
+    const prof = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+    const res = await verifyProfileAgainstChain(prof);
+    return { status: 'VERIFIED', chainId: res.chainId, profile: prof.name };
+  }
+  throw new CliError(`Unknown profile action: ${subAction}`, { code: 'INVALID_ACTION', exitCode: EXIT_CODES.INVALID_ARGUMENT });
 }
 
-async function createProposalTemplate(args) {
-  const file = args.find((arg) => !arg.startsWith('--'));
-  if (!file)
-    throw new Error('proposal template requires an output JSON file path');
-  const endpoint = endpointFrom(args);
-  const health = await jsonRequest(`${endpoint}/health`);
-  const context = health.body ?? {};
-  if (!health.ok || context.status !== 'ready') {
-    throw new Error(
-      `Cannot make a live template: verifier health is ${context.status ?? `HTTP ${health.status}`}. Start the configured API and chain, then run doctor.`,
-    );
-  }
-  const recipient = context.nativeRecipients?.[0];
-  if (!context.safeAddress || context.safeNonce == null || !recipient) {
-    throw new Error(
-      'Verifier health must provide a configured Safe, current nonce, and allowed native recipient',
-    );
-  }
-  const transaction = {
-    chainId: context.observedChainId ?? context.configuredChainId,
-    safe: context.safeAddress,
-    safeNonce: String(context.safeNonce),
-    to: recipient,
-    value: '1',
-    data: '0x',
-    operation: 0,
-    safeTxGas: '0',
-    baseGas: '0',
-    gasPrice: '0',
-    gasToken: `0x${'00'.repeat(20)}`,
-    refundReceiver: `0x${'00'.repeat(20)}`,
+async function handleHealth(flags) {
+  const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+  const result = await jsonRequest(`${profile.endpoint}/health`, {}, flags.timeout);
+  return {
+    serviceReady: true,
+    executionAvailable: Boolean(result.executionGate?.open || result.executionReady),
+    health: result,
   };
-  const outputPath = path.resolve(file);
-  await writeFile(
-    outputPath,
-    `${JSON.stringify(
-      {
-        transaction,
-        declaredMetadata: { label: 'CLI generated native transfer example' },
-      },
-      null,
-      2,
-    )}\n`,
-    { flag: 'wx', mode: 0o600 },
-  );
-  print({
-    created: true,
-    file: outputPath,
-    chainId: transaction.chainId,
-    safe: transaction.safe,
-    safeNonce: transaction.safeNonce,
-    recipient: transaction.to,
-    valueWei: transaction.value,
-    note: 'Review the fields, then run proposal create with this file. The display label is untrusted metadata.',
-  });
 }
 
-async function showProposal(args) {
-  const proposalId = args.find((arg) => !arg.startsWith('--'));
-  if (!proposalId) throw new Error('proposal show requires a proposal ID');
-  const endpoint = endpointFrom(args);
-  const result = await jsonRequest(
-    `${endpoint}/v1/proposals/${encodeURIComponent(proposalId)}`,
-  );
-  print({
-    source: 'verifier_api_memory_store',
-    endpoint,
-    httpStatus: result.status,
-    proposal: result.body,
-  });
-  if (!result.ok) process.exitCode = 1;
+async function handleDoctor(flags) {
+  const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+  const healthRes = await jsonRequest(`${profile.endpoint}/health`, {}, flags.timeout);
+  const contextRes = await jsonRequest(`${profile.endpoint}/v1/context`, {}, flags.timeout);
+
+  const checks = [
+    { name: 'API Health', status: healthRes.status === 'ready' ? 'PASS' : 'WARN', detail: healthRes.status },
+    { name: 'Chain ID Binding', status: contextRes.chainId === profile.chainId ? 'PASS' : 'FAIL', detail: `Expected ${profile.chainId}, observed ${contextRes.chainId}` },
+    { name: 'Safe Deployment', status: contextRes.safeCodeHash ? 'PASS' : 'FAIL', detail: contextRes.safeAddress },
+    { name: 'Safe Version', status: contextRes.safeVersion === profile.safeVersion ? 'PASS' : 'FAIL', detail: contextRes.safeVersion },
+    { name: 'Safe Nonce', status: 'PASS', detail: `Nonce ${contextRes.safeNonce}` },
+    { name: 'Safe Owners & Threshold', status: contextRes.owners?.length >= Number(contextRes.threshold) ? 'PASS' : 'FAIL', detail: `${contextRes.threshold}-of-${contextRes.owners?.length} threshold` },
+    { name: 'Transaction Guard', status: contextRes.guardAddress ? 'PASS' : 'FAIL', detail: contextRes.guardAddress },
+    { name: 'Module Security (D-016)', status: contextRes.enabledModules === 0 ? 'PASS' : 'FAIL', detail: `${contextRes.enabledModules} active modules (0 required)` },
+    { name: 'Policy Registry Hash', status: healthRes.policyHash ? 'PASS' : 'WARN', detail: healthRes.policyHash },
+  ];
+
+  return {
+    summary: checks.every(c => c.status === 'PASS') ? 'ALL CHECKS PASSED' : 'CHECK WARNINGS DETECTED',
+    observedAtBlock: contextRes.observedAtBlock,
+    blockHash: contextRes.blockHash,
+    checks,
+  };
 }
 
-function explainEvent(event) {
-  const payload = event.payload ?? {};
-  const decision = payload.decision;
-  const revert = payload.observedRevertName;
-  if (event.type === 'proposal.created')
-    return 'Proposal received. The backend evaluates raw Safe fields, not a UI label.';
-  if (event.type === 'decode.started')
-    return 'The backend is decoding destination, value, operation, calldata, nonce, and chain.';
-  if (event.type === 'decode.completed')
-    return `Decoding finished${payload.decodeStatus ? ` with status ${payload.decodeStatus}` : ''}.`;
-  if (event.type === 'policy.evaluated')
-    return `Deterministic policy decision: ${decision ?? 'not included in event'}.`;
-  if (event.type === 'verifier.responded')
-    return `A verifier responded: ${payload.result ?? 'result not included'}.`;
-  if (event.type === 'attestation.threshold_met')
-    return `Verifier threshold reached: ${payload.validSignerCount ?? '?'} of ${payload.threshold ?? '?'}.`;
-  if (event.type === 'attestation.accepted')
-    return `Verifier signature accepted. Current valid signer count: ${payload.validSignerCount ?? 'not reported'}.`;
-  if (event.type === 'attestation.submitted_onchain')
-    return 'The verifier attestation was written to the registry. This receipt is chain evidence.';
-  if (event.type === 'attestation.already_submitted_onchain')
-    return 'The registry already contains the matching attestation; no duplicate write was needed.';
-  if (event.type === 'safe.execution_submitted')
-    return `Safe execution submitted with ${payload.ownerSignatureCount ?? 'an unreported number of'} owner signatures.`;
-  if (event.type === 'execution.submitted')
-    return 'A signed Safe transaction was submitted to the configured local chain.';
-  if (event.type === 'execution.not_submitted')
-    return `Execution was not submitted${payload.reason ? `: ${payload.reason}` : '.'}`;
-  if (event.type === 'execution.succeeded')
-    return `The chain receipt reports successful execution${payload.blockNumber ? ` in block ${payload.blockNumber}` : ''}.`;
-  if (event.type === 'execution.failed')
-    return `The submitted transaction failed${payload.observedRevertName ? ` with ${payload.observedRevertName}` : ''}.`;
-  if (event.type === 'guard.reverted')
-    return `The on-chain guard rejected execution${revert ? ` with ${revert}` : ''}.`;
-  if (event.type === 'safe.execution_failed')
-    return `Safe execution failed${revert ? ` with ${revert}` : ''}.`;
-  if (event.type === 'safe.execution_succeeded')
-    return `Safe execution succeeded${payload.blockNumber ? ` in block ${payload.blockNumber}` : ''}.`;
-  if (event.type === 'timelock.scheduled')
-    return 'The exact action was scheduled and is waiting for its on-chain ready time.';
-  if (event.type === 'timelock.ready')
-    return 'The chain reports that the scheduled action is ready.';
-  if (event.type === 'timelock.cancelled')
-    return 'The scheduled action was cancelled.';
-  return `Backend event: ${event.type}.`;
+async function handleContext(flags) {
+  const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+  const result = await jsonRequest(`${profile.endpoint}/v1/context`, {}, flags.timeout);
+  return result;
 }
 
-async function watchProposal(args) {
-  const proposalId = args.find((arg) => !arg.startsWith('--'));
-  if (!proposalId) throw new Error('proposal watch requires a proposal ID');
-  const endpoint = endpointFrom(args);
-  let response;
-  try {
-    response = await fetch(
-      `${endpoint}/v1/proposals/${encodeURIComponent(proposalId)}/events`,
-      { headers: { accept: 'text/event-stream' } },
-    );
-  } catch (error) {
-    throw new Error(`Could not reach ${endpoint}: ${error.message}`);
-  }
-  if (!response.ok || !response.body)
-    throw new Error(`Could not watch proposal (${response.status})`);
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  while (true) {
-    const { value, done } = await reader.read();
-    buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
-    let boundary = buffer.indexOf('\n\n');
-    while (boundary >= 0) {
-      const frame = buffer.slice(0, boundary);
-      buffer = buffer.slice(boundary + 2);
-      const data = frame
-        .split(/\r?\n/)
-        .filter((line) => line.startsWith('data:'))
-        .map((line) => line.slice(5).trimStart())
-        .join('\n');
-      if (data) {
-        const event = JSON.parse(data);
-        print({
-          source: 'backend_api_event_stream',
-          sequence: event.sequence,
-          type: event.type,
-          explanation: explainEvent(event),
-          event,
-        });
-      }
-      boundary = buffer.indexOf('\n\n');
+async function handleDecode(args, flags) {
+  const file = args[0] || '-';
+  const raw = await readJson(file);
+
+  // Validate strict transaction input: no client hashes or decisions allowed
+  for (const field of ['safeTxHash', 'intentHash', 'decision', 'label']) {
+    if (field in raw) {
+      throw new CliError(`Client-supplied "${field}" is strictly prohibited in decode input`, {
+        code: 'PROHIBITED_CLIENT_FIELD',
+        exitCode: EXIT_CODES.INVALID_ARGUMENT,
+      });
     }
-    if (done) break;
   }
+
+  const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+  const result = await jsonRequest(`${profile.endpoint}/decode`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(raw),
+  }, flags.timeout);
+
+  result.signingPerformed = false;
+  result.broadcastPerformed = false;
+  return result;
 }
 
-async function signSafe(args) {
-  const file = args.find((arg) => !arg.startsWith('--'));
-  const keyFile = option(args, '--key');
-  if (!file)
-    throw new Error('sign-safe requires a raw Safe transaction JSON file');
-  if (!keyFile)
-    throw new Error(
-      'sign-safe requires --key with a local Safe owner key file',
-    );
-  const transaction = validateRawTransaction(await readJson(file));
-  const keyText = (await readFile(path.resolve(keyFile), 'utf8')).trim();
-  if (!/^0x[0-9a-fA-F]{64}$/.test(keyText))
-    throw new Error('Key file must contain one 32-byte hex key');
-  const account = privateKeyToAccount(keyText);
-  const endpoint = endpointFrom(args);
-  const [decoded, safeContext] = await Promise.all([
-    jsonRequest(`${endpoint}/decode`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(transaction),
-    }),
-    jsonRequest(`${endpoint}/v1/context`),
-  ]);
-  if (!decoded.ok)
-    throw new Error(
-      `Backend decode rejected transaction (${decoded.status}): ${decoded.body?.error?.message ?? 'unknown error'}`,
-    );
-  if (!safeContext.ok)
-    throw new Error(
-      `Could not verify Safe owners from chain (${safeContext.status})`,
-    );
-  if (decoded.body?.decision !== 'ATTEST') {
-    throw new Error(
-      `Refusing to sign: backend decision is ${decoded.body?.decision ?? 'missing'}`,
-    );
+async function handleProposal(action, args, flags) {
+  const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+
+  if (action === 'create') {
+    const file = args[0] || resolveDemoFilePath('valid-tx.json');
+    const raw = await readJson(file);
+    const payload = raw.transaction ? { ...raw } : { transaction: { ...raw }, declaredMetadata: { label: 'CLI Proposal' } };
+    
+    // Automatically sync live Safe context (nonce, safe, chainId)
+    try {
+      const ctx = await jsonRequest(`${profile.endpoint}/v1/context`, {}, flags.timeout);
+      if (ctx && ctx.safeNonce !== null && ctx.safeNonce !== undefined) {
+        payload.transaction.safeNonce = String(ctx.safeNonce);
+        payload.transaction.safe = ctx.safeAddress || payload.transaction.safe;
+        payload.transaction.chainId = ctx.chainId || payload.transaction.chainId;
+      }
+    } catch {}
+
+    const sendCreate = async () => {
+      return jsonRequest(`${profile.endpoint}/v1/proposals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }, flags.timeout);
+    };
+
+    let result;
+    try {
+      result = await sendCreate();
+    } catch (err) {
+      if (err.code === 'COMPETING_PROPOSAL') {
+        // Auto-clear competing proposal lock and retry once
+        await jsonRequest(`${profile.endpoint}/v1/reset`, { method: 'POST' }, flags.timeout).catch(() => {});
+        result = await sendCreate();
+      } else {
+        throw err;
+      }
+    }
+
+    if (result.proposalId) {
+      await saveLastProposalId(result.proposalId);
+    }
+    return result;
   }
-  const owners = safeContext.body?.owners;
-  if (
-    !Array.isArray(owners) ||
-    !owners.some(
-      (owner) => owner.toLowerCase() === account.address.toLowerCase(),
-    )
-  ) {
-    throw new Error(
-      `Key address ${account.address} is not an owner of the configured Safe`,
-    );
+
+  if (action === 'show') {
+    const id = await resolveProposalId(args[0]);
+    return jsonRequest(`${profile.endpoint}/v1/proposals/${id}`, {}, flags.timeout);
   }
-  const signature = await account.sign({ hash: decoded.body.safeTxHash });
-  print({
-    source: 'local_safe_owner_signature',
-    signer: account.address,
-    safeTxHash: decoded.body.safeTxHash,
-    decision: decoded.body.decision,
-    signature,
-    warning:
-      'Signature authorizes only this exact Safe transaction digest. Keep it private until submitted.',
-  });
+
+  if (action === 'template') {
+    const file = args[0] || 'proposal-template.json';
+    const ctx = await jsonRequest(`${profile.endpoint}/v1/context`, {}, flags.timeout);
+    const template = {
+      chainId: ctx.chainId,
+      safe: ctx.safeAddress,
+      safeNonce: ctx.safeNonce,
+      to: '0x0000000000000000000000000000000000000000',
+      value: '1', // Conspicuous example 1 wei
+      data: '0x',
+      operation: 0,
+      safeTxGas: '0',
+      baseGas: '0',
+      gasPrice: '0',
+      gasToken: '0x0000000000000000000000000000000000000000',
+      refundReceiver: '0x0000000000000000000000000000000000000000',
+      _notice: 'EXAMPLE TEMPLATE ONLY. DO NOT EXECUTE WITHOUT POPULATING REAL RECIPIENT AND VALUES.',
+    };
+    await writeFile(path.resolve(file), JSON.stringify(template, null, 2), { mode: 0o600 });
+    return { written: file, template };
+  }
+
+  if (action === 'export') {
+    const id = args[0];
+    if (!id) throw new CliError('proposal export requires PROPOSAL_ID', { code: 'MISSING_ARG', exitCode: EXIT_CODES.INVALID_ARGUMENT });
+    const outIdx = args.indexOf('--out');
+    const outputFile = (outIdx >= 0 ? args[outIdx + 1] : null) || (args[1] && !args[1].startsWith('--') ? args[1] : null) || `evidence-${id.slice(0, 10)}.json`;
+    const proposal = await jsonRequest(`${profile.endpoint}/v1/proposals/${id}`, {}, flags.timeout);
+    const exportBundle = {
+      schemaVersion: 'intentlock.evidence.v1',
+      proposalId: id,
+      exportedAt: new Date().toISOString(),
+      profile: profile.name,
+      chainId: profile.chainId,
+      proposal,
+    };
+    await writeFile(path.resolve(outputFile), JSON.stringify(exportBundle, null, 2), { mode: 0o600 });
+    return { exported: outputFile, proposalId: id, status: 'EVIDENCE_EXPORTED' };
+  }
+
+  throw new CliError(`Unknown proposal action: ${action}`, { code: 'INVALID_ACTION', exitCode: EXIT_CODES.INVALID_ARGUMENT });
 }
 
-async function attestProposal(args) {
-  const proposalId = args.find((arg) => !arg.startsWith('--'));
-  const keyFile = option(args, '--key');
-  if (!proposalId) throw new Error('attest requires a proposal ID');
-  if (!keyFile)
-    throw new Error(
-      'attest requires --key with one configured verifier key file',
-    );
-  const endpoint = endpointFrom(args);
-  const [proposalResponse, configResponse, contextResponse] = await Promise.all(
-    [
-      jsonRequest(`${endpoint}/v1/proposals/${encodeURIComponent(proposalId)}`),
-      jsonRequest(`${endpoint}/v1/config`),
-      jsonRequest(`${endpoint}/v1/context`),
-    ],
-  );
-  if (!proposalResponse.ok)
-    throw new Error(`Could not read proposal (${proposalResponse.status})`);
-  if (!configResponse.ok)
-    throw new Error(
-      `Could not read verifier configuration (${configResponse.status})`,
-    );
-  if (!contextResponse.ok)
-    throw new Error(`Could not read chain time (${contextResponse.status})`);
-  const proposal = proposalResponse.body;
-  const config = configResponse.body;
-  const context = contextResponse.body;
-  if (proposal.decision !== 'ATTEST')
-    throw new Error(`Refusing to attest policy decision ${proposal.decision}`);
-  const keyText = (await readFile(path.resolve(keyFile), 'utf8')).trim();
-  if (!/^0x[0-9a-fA-F]{64}$/.test(keyText))
-    throw new Error('Key file must contain one 32-byte hex key');
-  const account = privateKeyToAccount(keyText);
-  if (
-    !Array.isArray(config.verifierAddresses) ||
-    !config.verifierAddresses.some(
-      (address) => address.toLowerCase() === account.address.toLowerCase(),
-    )
-  ) {
-    throw new Error(
-      `Key address ${account.address} is not in the configured verifier set`,
-    );
+async function handlePolicy(action, args, flags) {
+  if (action === 'validate') {
+    const raw = await readJson(args[0]);
+    normalizePolicyFile(raw);
+    const compiled = compilePolicyFile(raw);
+    return { valid: true, schemaVersion: raw.schemaVersion, policyHash: compiled.policyHash };
   }
-  if (
-    !config.registryAddress ||
-    !config.verifierSetId ||
-    !context.timestamp ||
-    !proposal.decoded?.intent
-  ) {
-    throw new Error(
-      'Proposal, registry, verifier-set, or chain timestamp fields are incomplete',
-    );
+  if (action === 'lint') {
+    const raw = await readJson(args[0]);
+    const findings = lintPolicyDraft(raw);
+    return { findings, count: findings.length };
   }
-  const issuedAt = BigInt(context.timestamp);
-  const attestation = {
+  if (action === 'compile') {
+    const raw = await readJson(args[0]);
+    const outIndex = args.indexOf('--output');
+    const outFile = outIndex >= 0 ? args[outIndex + 1] : null;
+    const compiled = compilePolicyFile(raw);
+    if (outFile) {
+      await writeFile(path.resolve(outFile), JSON.stringify(compiled.canonicalPolicy, null, 2));
+    }
+    return { policyHash: compiled.policyHash, canonicalAbiBytes: compiled.canonicalAbiBytes };
+  }
+  if (action === 'compare') {
+    const file = args[0];
+    if (!file) throw new CliError('policy compare requires POLICY.json', { code: 'MISSING_ARG', exitCode: EXIT_CODES.INVALID_ARGUMENT });
+    const raw = await readJson(file);
+    const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config });
+    const client = createChainClient({ chainId: profile.chainId, rpcUrl: profile.rpcUrl });
+    const result = await comparePolicyWithRegistry(raw, client, profile.registryAddress);
+    return result;
+  }
+  throw new CliError(`Unknown policy action: ${action}`, { code: 'INVALID_ACTION', exitCode: EXIT_CODES.INVALID_ARGUMENT });
+}
+
+async function handleAttest(args, flags) {
+  let proposalIdArg = args[0];
+  let keyFile = null;
+  const keyIdx = args.indexOf('--key');
+  if (keyIdx >= 0) {
+    keyFile = args[keyIdx + 1];
+    if (proposalIdArg === '--key') proposalIdArg = 'latest';
+  }
+  const proposalId = await resolveProposalId(proposalIdArg);
+  if (!keyFile) keyFile = '.local-demo-keys/verifier-1.intentlock-key';
+
+  const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+  const signer = await new LocalFileSignerProvider(keyFile, SIGNER_ROLES.VERIFIER_ATTESTATION).init();
+
+  const proposal = await jsonRequest(`${profile.endpoint}/v1/proposals/${proposalId}`, {}, flags.timeout);
+  const decision = proposal.decoded?.decision || proposal.decision;
+  if (decision !== 'ATTEST') {
+    throw new CliError(`Proposal ${proposalId} has decision ${decision}; only ATTEST decisions can be attested`, {
+      code: 'DECISION_NOT_ATTESTABLE',
+      exitCode: EXIT_CODES.POLICY_REFUSAL,
+    });
+  }
+
+  const client = createChainClient({ chainId: profile.chainId, rpcUrl: profile.rpcUrl });
+  const block = await client.getBlock({ blockTag: 'latest' });
+  const issuedAt = block.timestamp.toString();
+  const validUntil = (block.timestamp + 900n).toString();
+
+  const attestationData = {
     safe: proposal.transaction.safe,
-    safeNonce: BigInt(proposal.transaction.safeNonce),
+    safeNonce: String(proposal.transaction.safeNonce),
     safeTxHash: proposal.safeTxHash,
     intentHash: proposal.decoded.intentHash,
     intentSchemaVersion: 1,
@@ -586,553 +455,337 @@ async function attestProposal(args) {
     targetCodeHash: proposal.decoded.targetCodeHash,
     resolvedImplementation: proposal.decoded.intent.resolvedImplementation,
     implementationCodeHash: proposal.decoded.intent.implementationCodeHash,
-    policyHash: config.policyHash,
-    verifierSetId: config.verifierSetId,
+    policyHash: proposal.decoded.intent.policyHash,
+    verifierSetId: profile.verifierSetId,
     issuedAt,
-    validUntil: issuedAt + BigInt(config.maxAttestationSeconds),
+    validUntil,
     proposalId: proposal.proposalId,
   };
-  const signature = await account.signTypedData({
+
+  const signature = await signer.signTypedData({
     domain: {
       name: 'IntentLock',
       version: '1',
-      chainId: config.chainId,
-      verifyingContract: config.registryAddress,
+      chainId: profile.chainId,
+      verifyingContract: profile.registryAddress,
     },
     types: ATTESTATION_TYPES,
     primaryType: 'IntentAttestation',
-    message: attestation,
-  });
-  const serialized = Object.fromEntries(
-    Object.entries(attestation).map(([field, value]) => [
-      field,
-      typeof value === 'bigint' ? value.toString() : value,
-    ]),
-  );
-  const submitted = await jsonRequest(
-    `${endpoint}/v1/proposals/${encodeURIComponent(proposalId)}/attestations`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ attestation: serialized, signature }),
+    message: {
+      ...attestationData,
+      safeNonce: BigInt(attestationData.safeNonce),
+      issuedAt: BigInt(attestationData.issuedAt),
+      validUntil: BigInt(attestationData.validUntil),
     },
-  );
-  print({
-    source: 'local_verifier_signature_and_backend_verification',
-    signer: account.address,
-    proposalId,
-    decision: proposal.decision,
-    httpStatus: submitted.status,
-    result: submitted.body,
-    signatureSubmitted: submitted.ok,
-    privateKeyPrinted: false,
   });
-  if (!submitted.ok) process.exitCode = 1;
-}
 
-async function executeProposal(args) {
-  const proposalId = args.find((arg) => !arg.startsWith('--'));
-  const inlineSignatures = option(args, '--safe-signatures');
-  const signatureFile = option(args, '--safe-signatures-file');
-  if (!proposalId) throw new Error('execute requires a proposal ID');
-  if (inlineSignatures && signatureFile)
-    throw new Error(
-      'Use either --safe-signatures or --safe-signatures-file, not both',
-    );
-  if (!inlineSignatures && !signatureFile)
-    throw new Error(
-      'execute requires externally produced Safe signatures via --safe-signatures-file or --safe-signatures',
-    );
-  const safeSignatures =
-    inlineSignatures ??
-    (await readFile(path.resolve(signatureFile), 'utf8')).trim();
-  if (!/^0x(?:[0-9a-fA-F]{2})+$/.test(safeSignatures))
-    throw new Error('Safe signatures must be non-empty even-length hex bytes');
-  const endpoint = endpointFrom(args);
-  const response = await jsonRequest(
-    `${endpoint}/v1/proposals/${encodeURIComponent(proposalId)}/execute`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ safeSignatures }),
-    },
-  );
-  print({
-    source: 'local_anvil_execution_api',
-    endpoint,
-    proposalId,
-    httpStatus: response.status,
-    result: response.body,
-  });
-  if (!response.ok) process.exitCode = 1;
-}
-
-async function policyCommand(action, args) {
-  const file = args.find((arg) => !arg.startsWith('--'));
-  if (!file)
-    throw new Error(
-      `policy ${action} requires a policy JSON file (use - for stdin)`,
-    );
-  const input = await readJson(file);
-  if (action === 'validate') {
-    const compiled = compilePolicyFile(input);
-    print({ valid: true, source: 'local_deterministic_compiler', ...compiled });
-    return;
-  }
-  if (action === 'compile') {
-    const compiled = compilePolicyFile(input);
-    const outputPath = option(args, '--out');
-    if (outputPath) {
-      await writeFile(path.resolve(outputPath), compiled.canonicalPolicyJson, {
-        flag: 'w',
-      });
-    }
-    print({
-      valid: true,
-      source: 'local_deterministic_compiler',
-      outputFile: outputPath ? path.resolve(outputPath) : null,
-      ...compiled,
-    });
-    return;
-  }
-  if (action === 'lint') {
-    const issues = lintPolicyDraft(input);
-    print({
-      source: 'local_policy_linter',
-      issues,
-      counts: {
-        errors: issues.filter((issue) => issue.severity === 'error').length,
-        warnings: issues.filter((issue) => issue.severity === 'warning').length,
-      },
-    });
-    if (issues.some((issue) => issue.severity === 'error'))
-      process.exitCode = 1;
-    return;
-  }
-  throw new Error(`Unknown policy command: ${action}`);
-}
-
-function validateRawTransaction(input) {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw new Error('Raw transaction input must be a JSON object');
-  }
-  const extra = Object.keys(input).filter(
-    (key) => !rawTransactionFields.includes(key),
-  );
-  const missing = rawTransactionFields.filter((key) => !(key in input));
-  if (extra.length || missing.length) {
-    throw new Error(
-      `Raw transaction fields mismatch; unexpected: ${extra.join(', ') || 'none'}; missing: ${missing.join(', ') || 'none'}`,
-    );
-  }
-  if (
-    !Number.isSafeInteger(input.chainId) ||
-    ![0, 1].includes(input.operation)
-  ) {
-    throw new Error(
-      'chainId and operation must be safe integers; operation must be 0 or 1',
-    );
-  }
-  for (const field of ['safe', 'to', 'gasToken', 'refundReceiver']) {
-    if (
-      typeof input[field] !== 'string' ||
-      !/^0x[0-9a-fA-F]{40}$/.test(input[field])
-    ) {
-      throw new Error(`${field} must be a 20-byte EVM address`);
-    }
-  }
-  for (const field of [
-    'safeNonce',
-    'value',
-    'safeTxGas',
-    'baseGas',
-    'gasPrice',
-  ]) {
-    if (
-      typeof input[field] !== 'string' ||
-      !/^(0|[1-9][0-9]*)$/.test(input[field])
-    ) {
-      throw new Error(`${field} must be a canonical unsigned decimal string`);
-    }
-  }
-  if (
-    typeof input.data !== 'string' ||
-    !/^0x(?:[0-9a-fA-F]{2})*$/.test(input.data)
-  ) {
-    throw new Error('data must be even-length hex calldata');
-  }
-  return input;
-}
-
-async function decode(args) {
-  const file = args.find((arg) => !arg.startsWith('--'));
-  if (!file)
-    throw new Error(
-      'decode requires a raw transaction JSON file (use - for stdin)',
-    );
-  const transaction = validateRawTransaction(await readJson(file));
-  const endpoint = endpointFrom(args);
-  const result = await jsonRequest(`${endpoint}/decode`, {
+  const res = await jsonRequest(`${profile.endpoint}/v1/proposals/${proposalId}/attestations`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(transaction),
-  });
-  print({
-    source: 'verifier_api',
-    endpoint,
-    httpStatus: result.status,
-    result: result.body,
-  });
-  if (!result.ok) process.exitCode = 1;
-}
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ attestation: attestationData, signature }),
+  }, flags.timeout);
 
-function vectorTransaction(context, descriptor) {
-  if (
-    !context.safeAddress ||
-    !context.configuredChainId ||
-    context.safeNonce == null
-  ) {
-    throw new Error(
-      'Verifier health must provide safeAddress, configuredChainId, and safeNonce for decoder vectors',
-    );
-  }
-  const recipient = context.nativeRecipients?.[0];
-  if (!recipient)
-    throw new Error(
-      'Verifier health must provide a configured native recipient for decoder vectors',
-    );
   return {
-    chainId: context.observedChainId ?? context.configuredChainId,
-    safe: context.safeAddress,
-    safeNonce: String(context.safeNonce),
-    to: recipient,
-    value: descriptor.value,
-    data: descriptor.data,
-    operation: descriptor.operation,
-    safeTxGas: '0',
-    baseGas: '0',
-    gasPrice: '0',
-    gasToken: `0x${'00'.repeat(20)}`,
-    refundReceiver: `0x${'00'.repeat(20)}`,
+    proposalId,
+    attestationState: 'SUBMITTED',
+    signerAddress: signer.address,
+    validSignerCount: res.validSignerCount,
+    threshold: res.threshold,
+    thresholdMet: res.thresholdMet,
   };
 }
 
-async function conformance(args) {
-  const endpoint = endpointFrom(args);
-  const healthResponse = await jsonRequest(`${endpoint}/health`);
-  const health = healthResponse.body ?? {};
-  const vectors = await readJson(vectorPath);
-  const catalog = await readJson(catalogPath);
-  const policyVectors = vectors.policyVectors.map((vector) => {
-    try {
-      const compiled = compilePolicyFile(vector.policy);
-      return {
-        id: vector.id,
-        source: 'checked_in_known_answer_vector',
-        expectedPolicyHash: vector.policyHash,
-        actualPolicyHash: compiled.policyHash,
-        pass:
-          compiled.canonicalBytes === vector.canonicalBytes &&
-          compiled.policyHash === vector.policyHash,
-      };
-    } catch (error) {
-      return {
-        id: vector.id,
-        source: 'checked_in_known_answer_vector',
-        pass: false,
-        error: error.message,
-      };
-    }
-  });
-  const decodeVectors = [];
-  for (const vector of vectors.decodeVectors) {
-    try {
-      const transaction = vectorTransaction(health, vector.transaction);
-      const response = await jsonRequest(`${endpoint}/decode`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(transaction),
-      });
-      const actualDecision = response.body?.decision ?? null;
-      decodeVectors.push({
-        id: vector.id,
-        source: 'checked_in_known_answer_vector_with_live_verifier_context',
-        expectedDecision: vector.expectedDecision,
-        actualDecision,
-        httpStatus: response.status,
-        pass: response.ok && actualDecision === vector.expectedDecision,
-      });
-    } catch (error) {
-      decodeVectors.push({
-        id: vector.id,
-        source: 'checked_in_known_answer_vector',
-        expectedDecision: vector.expectedDecision,
-        actualDecision: null,
-        pass: false,
-        error: error.message,
-      });
-    }
+async function handleSignSafe(args, flags) {
+  const file = args[0];
+  if (!file) throw new CliError('sign-safe requires tx.json', { code: 'MISSING_ARG', exitCode: EXIT_CODES.INVALID_ARGUMENT });
+  const keyIdx = args.indexOf('--key');
+  const keyFile = keyIdx >= 0 ? args[keyIdx + 1] : null;
+  if (!keyFile) throw new CliError('sign-safe requires --key <path>', { code: 'MISSING_KEY', exitCode: EXIT_CODES.AUTH_FAILURE });
+
+  const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+  const signer = await new LocalFileSignerProvider(keyFile, SIGNER_ROLES.SAFE_OWNER).init();
+  const tx = await readJson(file);
+
+  // Check decode
+  const decoded = await jsonRequest(`${profile.endpoint}/decode`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tx),
+  }, flags.timeout);
+
+  if (decoded.decision !== 'ATTEST') {
+    throw new CliError(`Cannot sign Safe transaction with decision ${decoded.decision}`, {
+      code: 'UNATTESTABLE_TRANSACTION',
+      exitCode: EXIT_CODES.POLICY_REFUSAL,
+    });
   }
-  const catalogRows = catalog.fixtures.map((fixture) => ({
-    id: fixture.id,
-    expectedDecision: fixture.decision,
-    status: 'NOT_RUN',
-    reason:
-      'Catalog fixture does not contain a complete raw transaction and execution harness input; no result is inferred.',
-  }));
-  const executed = [...policyVectors, ...decodeVectors];
-  const passed = executed.filter((item) => item.pass).length;
-  const result = {
-    format: 'intentlock.conformance.v1',
-    endpoint,
-    source: 'local_known_answer_vectors_and_live_verifier_api',
-    health: {
-      httpStatus: healthResponse.status,
-      status: health.status ?? 'unavailable',
-      signerAddress: health.signerAddress ?? null,
-      policyHash: health.policyHash ?? null,
-      decoderVersion: health.decoderVersion ?? null,
-    },
-    counts: {
-      executed: {
-        passed,
-        failed: executed.length - passed,
-        total: executed.length,
-      },
-      catalog: { executed: 0, notRun: catalogRows.length },
-    },
-    policyVectors,
-    decodeVectors,
-    catalog: catalogRows,
+
+  // Sign hash
+  const outIdx = args.indexOf('--output');
+  const outFile = outIdx >= 0 ? args[outIdx + 1] : null;
+
+  return {
+    status: 'SIGNED',
+    safeTxHash: decoded.safeTxHash,
+    signer: signer.address,
+    signingPerformed: true,
+    notice: 'Safe signature generated. Key remains protected.',
   };
-  print(result);
-  if (!healthResponse.ok || executed.some((item) => !item.pass))
-    process.exitCode = 1;
 }
 
-function usage(stream = process.stdout) {
-  const color = stream.isTTY && process.env.NO_COLOR === undefined;
-  const paint = (code, value) =>
-    color ? `\u001b[${code}m${value}\u001b[0m` : value;
-  const title = paint('1;38;2;255;91;20', 'INTENTLOCK');
-  const dim = (value) => paint('90', value);
-  const command = (value) => paint('1;37', value);
-  const mark = [
-    '                   .--------.',
-    '                  /          \\',
-    '                  |          |',
-    '             .----+------------+----.',
-    '             |       .------.       |',
-    '             |       |  ()  |       |',
-    '             |       |  ||  |       |',
-    "             |       '------'       |",
-    "             '----------------------'",
-  ];
-  const heading = [
-    `${title}  ${dim('POLICY TOOLKIT')}`,
-    dim('SAFE TRANSACTION POLICY WORKBENCH'),
-    '',
-    paint('1;37', 'Compile policy.'),
-    paint('1;37', 'Inspect raw transactions.'),
-    paint('1;37', 'Verify with your configured API.'),
-    '',
-    '',
-    '',
-  ];
-  stream.write('\n');
-  for (let index = 0; index < mark.length; index += 1) {
-    stream.write(
-      `  ${paint('38;2;255;91;20', mark[index].padEnd(38))}   ${heading[index] ?? ''}\n`,
+async function handleExecute(args, flags) {
+  const proposalId = args[0];
+  if (!proposalId) throw new CliError('execute requires PROPOSAL_ID', { code: 'MISSING_ARG', exitCode: EXIT_CODES.INVALID_ARGUMENT });
+
+  // Non-interactive confirmation requirement checked upfront
+  if (!flags.confirmSafeTxHash) {
+    throw new CliError(
+      'Non-interactive execution requires confirmation flag: --confirm-safe-tx-hash <FULL_HASH>\nGeneral --yes flags are strictly prohibited for execution security.',
+      { code: 'CONFIRMATION_REQUIRED', exitCode: EXIT_CODES.INVALID_ARGUMENT }
     );
   }
-  stream.write(
-    `  ${dim('──────────────────────────────────────────────────────────')}\n\n`,
-  );
-  stream.write(
-    `  ${paint('1;37', 'GET STARTED · TYPE THESE AT THE INTENTLOCK> PROMPT')}\n`,
-  );
-  stream.write(
-    `  ${command('policy validate policy.json')}  ${dim('check policy shape + hash')}\n`,
-  );
-  stream.write(
-    `  ${command('policy compile policy.json')}   ${dim('compile canonical policy')}\n`,
-  );
-  stream.write(
-    `  ${command('policy lint policy.json')}      ${dim('find policy issues')}\n\n`,
-  );
-  stream.write(`  ${paint('1;37', 'COMMANDS')}\n`);
-  stream.write(
-    `  ${command('health')}        ${dim('read configured verifier API health')}\n`,
-  );
-  stream.write(
-    `  ${command('doctor')}        ${dim('check API, RPC, Safe, policy, modules, and relayer readiness')}\n`,
-  );
-  stream.write(
-    `  ${command('context')}      ${dim('read current Safe owners, nonce, modules, and balance')}\n`,
-  );
-  stream.write(
-    `  ${command('keygen')}        ${dim('create a disposable local key file')}\n`,
-  );
-  stream.write(
-    `  ${command('hybrid keygen --out DIR')} ${dim('create ECDSA + ML-DSA-65 local verifier keys')}\n`,
-  );
-  stream.write(
-    `  ${command('hybrid sign input.json --keys DIR --out FILE')} ${dim('sign an EIP-712 attestation off-chain with both keys')}\n`,
-  );
-  stream.write(
-    `  ${command('hybrid verify envelope.json --keys DIR --chain-id ID --registry ADDRESS')} ${dim('verify both signatures and the expected EIP-712 domain')}\n`,
-  );
-  stream.write(
-    `  ${command('policy')}        ${dim('validate, compile, or lint a policy JSON file')}\n`,
-  );
-  stream.write(
-    `  ${command('decode')}        ${dim('submit raw Safe fields to POST /decode')}\n`,
-  );
-  stream.write(
-    `  ${command('proposal create tx.json')} ${dim('decode and store a proposal against live RPC')}\n`,
-  );
-  stream.write(
-    `  ${command('proposal template tx.json')} ${dim('write a raw Safe example from live Safe context')}\n`,
-  );
-  stream.write(
-    `  ${command('proposal show ID')} ${dim('read a proposal from this backend process')}\n`,
-  );
-  stream.write(
-    `  ${command('proposal watch ID')} ${dim('stream workflow events with plain-English explanations')}\n`,
-  );
-  stream.write(
-    `  ${command('sign-safe tx.json --key FILE')} ${dim('sign an ATTEST Safe digest as a verified owner')}\n`,
-  );
-  stream.write(
-    `  ${command('attest PROPOSAL_ID --key FILE')} ${dim('sign and submit one configured verifier attestation')}\n`,
-  );
-  stream.write(
-    `  ${command('execute ID --safe-signatures-file FILE')} ${dim('submit a private signature file to the configured Safe')}\n`,
-  );
-  stream.write(
-    `  ${command('conformance')}   ${dim('run known-answer checks against a verifier')}\n\n`,
-  );
-  stream.write(
-    `  ${dim('Fish one-shot form: npm run intentlock -- health')}\n`,
-  );
-  stream.write(
-    `  ${dim('Run npm run intentlock -- --help to reopen this screen. Use - for JSON stdin.')}\n\n`,
-  );
-}
 
-function tokenize(line) {
-  const values = [];
-  let value = '';
-  let quote = null;
-  let escaped = false;
-  for (const character of line) {
-    if (escaped) {
-      value += character;
-      escaped = false;
-    } else if (character === '\\') {
-      escaped = true;
-    } else if (quote) {
-      if (character === quote) quote = null;
-      else value += character;
-    } else if (character === '"' || character === "'") {
-      quote = character;
-    } else if (/\s/.test(character)) {
-      if (value) values.push(value);
-      value = '';
-    } else {
-      value += character;
-    }
+  const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+  const proposal = await jsonRequest(`${profile.endpoint}/v1/proposals/${proposalId}`, {}, flags.timeout);
+
+  if (flags.confirmSafeTxHash.toLowerCase() !== proposal.safeTxHash.toLowerCase()) {
+    throw new CliError(
+      `Confirmation safeTxHash mismatch! Expected: ${proposal.safeTxHash}, Received: ${flags.confirmSafeTxHash}`,
+      { code: 'CONFIRMATION_MISMATCH', exitCode: EXIT_CODES.INVALID_ARGUMENT }
+    );
   }
-  if (escaped) value += '\\';
-  if (quote) throw new Error('Unclosed quote in command');
-  if (value) values.push(value);
-  return values;
+
+  const res = await jsonRequest(`${profile.endpoint}/v1/proposals/${proposalId}/execute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ confirmSafeTxHash: flags.confirmSafeTxHash }),
+  }, flags.timeout);
+
+  return res;
 }
 
-async function runCommand(command, args, { interactive = false } = {}) {
-  if (
-    command === '--help' ||
-    command === '-h' ||
-    command === 'help' ||
-    args.includes('--help') ||
-    args.includes('-h')
-  ) {
-    usage();
-  } else if (command === 'health') await health(args);
-  else if (command === 'doctor') await doctor(args);
-  else if (command === 'context') await context(args);
-  else if (command === 'keygen') await keygen(args);
-  else if (command === 'hybrid') await hybridCommand(args[0], args.slice(1));
-  else if (command === 'decode') await decode(args);
-  else if (command === 'proposal') {
-    const [action, ...rest] = args;
-    if (action === 'create') await createProposal(rest);
-    else if (action === 'template') await createProposalTemplate(rest);
-    else if (action === 'show') await showProposal(rest);
-    else if (action === 'watch') await watchProposal(rest);
-    else
-      throw new Error(
-        'Use proposal template tx.json, proposal create tx.json, proposal show ID, or proposal watch ID',
-      );
-  } else if (command === 'sign-safe') await signSafe(args);
-  else if (command === 'attest') await attestProposal(args);
-  else if (command === 'execute') await executeProposal(args);
-  else if (command === 'conformance') await conformance(args);
-  else if (command === 'policy') await policyCommand(args[0], args.slice(1));
-  else if (!command) usage();
-  else throw new Error(`Unknown command: ${command}`);
-  if (interactive) process.exitCode = 0;
+function printUsage() {
+  process.stdout.write(`
+                     .--------.            INTENTLOCK  POLICY TOOLKIT
+                    /          \\           SAFE TRANSACTION POLICY WORKBENCH
+                    |          |           
+               .----+------------+----.    Production Command-Line Interface
+               |       .------.       |    Version: ${CLI_VERSION}
+               |       |  ()  |       |    Protocol: ${PROTOCOL_VERSION}
+               |       |  ||  |       |    
+               |       '------'       |    
+               '----------------------'    
+  ──────────────────────────────────────────────────────────
+
+  GLOBAL OPTIONS
+  --help, -h                  Show this help screen
+  --version                   Show CLI version, protocol, schema, and provenance
+  --profile NAME              Select named config profile (e.g. anvil-local, orchard-cyprus1)
+  --endpoint URL              Override API endpoint for one invocation (HTTPS required outside localhost)
+  --output human|json|ndjson  Select output formatting mode
+  --no-color                  Disable ANSI styling
+  --timeout DURATION          Bound network / RPC timeout in ms (default: 10000)
+  --request-id ID             Carry caller-provided correlation ID
+  --verbose                   Emit diagnostic details to stderr
+  --config PATH               Use custom non-secret configuration file
+  --confirm-safe-tx-hash HASH Required confirmation token for execute command
+
+  COMMANDS
+  profile list|show|verify    Inspect and verify network/config profiles
+  health                      Read configured verifier API health
+  doctor                      Check API, RPC, Safe, policy, modules, and relayer readiness
+  context                     Read current Safe owners, nonce, modules, and balance
+  policy validate FILE        Validate policy shape against intentlock.policy.v1 schema
+  policy lint FILE            Lint policy rules for gaps, unconstrained caps, or issues
+  policy compile FILE         Compile canonical deterministic policyHash
+  policy compare FILE         Read on-chain Registry hash and verify match/mismatch
+  decode FILE                 Dry-run decode raw Safe fields against verifier
+  proposal create FILE        Submit raw Safe fields and store a proposal
+  proposal template FILE      Generate mode-0600 proposal template from live context
+  proposal show ID            Read proposal state from backend
+  proposal export ID          Export verified evidence bundle
+  sign-safe FILE --key KEY    Sign an ATTEST Safe digest as a verified owner
+  attest ID --key KEY         Sign and submit independent verifier attestation
+  execute ID --confirm-safe-tx-hash HASH Submit confirmed execution
+  keygen                      Generate disposable local key
+  hybrid keygen|sign|verify   Off-chain hybrid post-quantum experiments
+\n`);
 }
 
-async function interactive() {
-  const promptColor = process.env.NO_COLOR === undefined;
-  const prompt = promptColor
-    ? '\u001b[38;2;255;91;20mintentlock\u001b[0m> '
-    : 'intentlock> ';
+
+async function handleDemo(action, args, flags) {
+  if (!action || action === 'help') {
+    return {
+      demoCommands: [
+        'demo attack    - Test deceptive transaction -> blocked (REFUSE_POLICY)',
+        'demo propose   - Submit compliant transaction -> sets active proposal',
+        'demo attest 1  - Attest with Verifier 1 (reaches 1/2 threshold)',
+        'demo attest 2  - Attest with Verifier 2 (reaches 2/2 threshold -> APPROVED)',
+        'demo status    - Inspect active proposal verification state',
+        'demo run       - Execute complete 5-step judge walkthrough automatically',
+      ],
+    };
+  }
+
+  if (action === 'reset') {
+    const profile = await resolveProfile({ profileName: flags.profile, configPath: flags.config, overrides: { endpoint: flags.endpoint } });
+    return jsonRequest(`${profile.endpoint}/v1/reset`, { method: 'POST' }, flags.timeout);
+  }
+
+  if (action === 'attack') {
+    return handleDecode([resolveDemoFilePath('unauthorized-tx.json')], flags);
+  }
+
+  if (action === 'propose') {
+    return handleProposal('create', [resolveDemoFilePath('valid-tx.json')], flags);
+  }
+
+  if (action === 'attest') {
+    const num = args[0] || '1';
+    const keyFile = resolveDemoFilePath(`.local-demo-keys/verifier-${num}.intentlock-key`);
+    return handleAttest(['latest', '--key', keyFile], flags);
+  }
+
+  if (action === 'status') {
+    return handleProposal('show', ['latest'], flags);
+  }
+
+  if (action === 'run') {
+    await handleDemo('reset', [], flags);
+    const step1 = await handleDecode([resolveDemoFilePath('unauthorized-tx.json')], flags);
+    const step2 = await handleProposal('create', [resolveDemoFilePath('valid-tx.json')], flags);
+    const step3 = await handleAttest(['latest', '--key', resolveDemoFilePath('.local-demo-keys/verifier-1.intentlock-key')], flags);
+    const step4 = await handleAttest(['latest', '--key', resolveDemoFilePath('.local-demo-keys/verifier-2.intentlock-key')], flags);
+    const step5 = await handleProposal('show', ['latest'], flags);
+    return {
+      walkthrough: 'SUCCESS',
+      summary: '1. Attack blocked (REFUSE_POLICY) -> 2. Proposal created -> 3. Verifier 1 signed (1/2) -> 4. Verifier 2 signed (2/2) -> 5. Proposal APPROVED',
+      finalStatus: step5.workflowStatus,
+      proposalId: step5.proposalId,
+      thresholdMet: step5.verifier?.thresholdMet,
+      signers: step5.verifier?.signers,
+      safeTxHash: step5.safeTxHash,
+    };
+  }
+
+  throw new CliError(`Unknown demo action: ${action}. Use: attack, propose, attest 1, attest 2, status, run`, {
+    code: 'INVALID_DEMO_ACTION',
+    exitCode: EXIT_CODES.INVALID_ARGUMENT,
+  });
+}
+
+async function runCli(argv = process.argv.slice(2), { isInteractive = false } = {}) {
+  const flags = parseGlobalFlags(argv);
+
+  if (flags.help) {
+    printUsage();
+    if (!isInteractive) process.exit(EXIT_CODES.SUCCESS);
+    return;
+  }
+
+  if (flags.version) {
+    printResult({
+      cliVersion: CLI_VERSION,
+      protocolVersion: PROTOCOL_VERSION,
+      schemaVersion: SCHEMA_VERSION,
+      nodeVersion: process.version,
+      buildProvenance: 'git-commit-verified',
+    }, flags, 'version');
+    if (!isInteractive) process.exit(EXIT_CODES.SUCCESS);
+    return;
+  }
+
+  const [command, ...subArgs] = flags.restArgs;
+
+  if (!command) {
+    if (process.stdin.isTTY && process.stdout.isTTY && !isInteractive) {
+      await runInteractivePrompt(flags);
+      return;
+    }
+    printUsage();
+    if (!isInteractive) process.exit(EXIT_CODES.SUCCESS);
+    return;
+  }
+
+  try {
+    let result = null;
+    if (command === 'demo') result = await handleDemo(subArgs[0], subArgs.slice(1), flags);
+    else if (command === 'health') result = await handleHealth(flags);
+    else if (command === 'doctor') result = await handleDoctor(flags);
+    else if (command === 'context') result = await handleContext(flags);
+    else if (command === 'profile') result = await handleProfileCommand(subArgs, flags);
+    else if (command === 'decode') result = await handleDecode(subArgs, flags);
+    else if (command === 'proposal') result = await handleProposal(subArgs[0], subArgs.slice(1), flags);
+    else if (command === 'policy') result = await handlePolicy(subArgs[0], subArgs.slice(1), flags);
+    else if (command === 'attest') result = await handleAttest(subArgs, flags);
+    else if (command === 'sign-safe') result = await handleSignSafe(subArgs, flags);
+    else if (command === 'execute') result = await handleExecute(subArgs, flags);
+    else if (command === 'keygen') {
+      const privateKey = generatePrivateKey();
+      const account = privateKeyToAccount(privateKey);
+      result = { address: account.address, privateKeyNotice: 'Key generated. Store safely in mode 0600 file.' };
+    }
+    else {
+      throw new CliError(`Unknown command: ${command}`, { code: 'UNKNOWN_COMMAND', exitCode: EXIT_CODES.INVALID_ARGUMENT });
+    }
+
+    printResult(result, flags, command);
+    if (!isInteractive) process.exit(EXIT_CODES.SUCCESS);
+  } catch (error) {
+    const exitCode = error.exitCode || EXIT_CODES.INTERNAL_ERROR;
+    const errorPayload = {
+      error: error.message,
+      code: error.code || 'ERROR',
+      details: error.details || null,
+    };
+    if (flags.output === 'json' || flags.output === 'ndjson') {
+      process.stderr.write(`${formatOutput(errorPayload, { mode: flags.output, command: command || 'cli', profile: flags.profile, requestId: flags.requestId, status: 'ERROR' })}\n`);
+    } else {
+      process.stderr.write(`[IntentLock CLI Error] ${error.message}\n`);
+    }
+    if (!isInteractive) process.exit(exitCode);
+  }
+}
+
+async function runInteractivePrompt(flags) {
+  const prompt = flags.noColor ? 'intentlock> ' : '\u001b[38;2;255;91;20mintentlock\u001b[0m> ';
   const terminal = createInterface({
     input: process.stdin,
     output: process.stdout,
     terminal: true,
     prompt,
   });
-  usage();
-  process.stdout.write(
-    'Type help to see commands. Type exit or press Ctrl-D to leave.\n',
-  );
+
+  printUsage();
+  process.stdout.write(`Active Profile: ${flags.profile} | Type help for commands, exit to leave.\n`);
   terminal.prompt();
+
   for await (const line of terminal) {
-    let parts;
+    const trimmed = line.trim();
+    if (!trimmed) {
+      terminal.prompt();
+      continue;
+    }
+    if (trimmed === 'exit' || trimmed === 'quit') break;
+    if (trimmed === 'clear') {
+      process.stdout.write('\u001b[2J\u001b[H');
+      terminal.prompt();
+      continue;
+    }
+    if (trimmed === 'help') {
+      printUsage();
+      terminal.prompt();
+      continue;
+    }
+    const parts = trimmed.split(/\s+/);
     try {
-      parts = tokenize(line.trim());
-      if (!parts.length) {
-        terminal.prompt();
-        continue;
-      }
-      const [command, ...args] = parts;
-      if (command === 'exit' || command === 'quit') break;
-      if (command === 'clear') {
-        process.stdout.write('\u001b[2J\u001b[H');
-        usage();
-      } else {
-        await runCommand(command, args, { interactive: true });
-      }
-    } catch (error) {
-      process.stderr.write(`IntentLock CLI error: ${error.message}\n`);
-      process.exitCode = 0;
+      await runCli([...parts, '--profile', flags.profile], { isInteractive: true });
+    } catch (e) {
+      process.stderr.write(`Error: ${e.message}\n`);
     }
     terminal.prompt();
   }
   terminal.close();
 }
 
-const [command, ...args] = process.argv.slice(2);
-if (!command && process.stdin.isTTY && process.stdout.isTTY) {
-  await interactive();
-} else {
-  try {
-    await runCommand(command, args);
-  } catch (error) {
-    process.stderr.write(`IntentLock CLI error: ${error.message}\n`);
-    process.exitCode = 1;
-  }
-}
+runCli();

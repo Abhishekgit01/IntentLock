@@ -307,3 +307,29 @@ export function lintPolicyDraft(input) {
   }
   return issues;
 }
+
+export async function comparePolicyWithRegistry(policyInput, client, registryAddress) {
+  const { policyHash } = compilePolicyFile(policyInput);
+  const onChainPolicyHash = await client.readContract({
+    address: registryAddress,
+    abi: [{
+      type: 'function',
+      name: 'currentPolicyHash',
+      stateMutability: 'view',
+      inputs: [],
+      outputs: [{ name: '', type: 'bytes32' }],
+    }],
+    functionName: 'currentPolicyHash',
+  });
+  const block = await client.getBlock({ blockTag: 'latest' });
+  const matches = policyHash.toLowerCase() === onChainPolicyHash.toLowerCase();
+  return {
+    matches,
+    localPolicyHash: policyHash,
+    onChainPolicyHash,
+    registryAddress,
+    blockNumber: block.number.toString(),
+    blockHash: block.hash,
+    timestamp: Number(block.timestamp),
+  };
+}

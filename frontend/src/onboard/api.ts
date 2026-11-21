@@ -9,12 +9,12 @@ import type {
   PolicyFile,
   RawTransaction,
 } from "./types";
+import { getApiRoot } from "../workbench/backend";
 
-const API_ROOT = (import.meta.env.VITE_INTENTLOCK_API_URL || "/api").replace(/\/$/, "");
 const ZERO_ADDRESS = `0x${"00".repeat(20)}`;
 
 async function request<T>(path: string, body?: unknown, allowUnavailable = false): Promise<T> {
-  const response = await fetch(`${API_ROOT}${path}`, {
+  const response = await fetch(`${getApiRoot()}${path}`, {
     method: body === undefined ? "GET" : "POST",
     headers: body === undefined ? undefined : { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),

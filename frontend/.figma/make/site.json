@@ -1,7 +1,14 @@
 {
+  "title": "IntentLock | Post-Quantum Multisig Intent Verification",
   "description": "Explore how IntentLock protects crypto multisig wallets by verifying transaction intent, blocking malicious transfers, and demonstrating security outcomes for signers and reviewers.",
+  "icons": {
+    "icon": "/favicon.svg"
+  },
+  "openGraph": {
+    "image": "/favicon.png"
+  },
   "robots": {
-    "index": false
+    "index": true
   },
   "accessibility": {
     "addBypassLinks": false,

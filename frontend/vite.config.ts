@@ -92,11 +92,11 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
     return html.replace(`<!-- ${slotName} -->`, content);
   }
 
-  const title = config.title ?? "Figma Make App";
+  const title = config.title ?? "IntentLock | Post-Quantum Multisig Intent Verification";
   const description = config.description ?? "";
   // Imported HTML keeps its own favicon. New Makes use PNG because Google Search does not
   // support SVG favicons, even though browsers do.
-  const favicon = config.icons?.icon ?? "/favicon.png";
+  const favicon = config.icons?.icon ?? "/favicon.svg";
   const socialImage = config.openGraph?.image ?? "";
   const language = sanitizeHtmlValue(config.language) || "en";
   const googleAnalyticsId = sanitizeHtmlValue(config.analytics?.googleAnalyticsId);
@@ -152,7 +152,9 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
           });
         }
         if (favicon) {
-          tags.push({ tag: "link", attrs: { rel: "icon", href: favicon }, injectTo: "head" });
+          tags.push({ tag: "link", attrs: { rel: "icon", type: "image/svg+xml", href: favicon }, injectTo: "head" });
+          tags.push({ tag: "link", attrs: { rel: "alternate icon", href: "/favicon.png" }, injectTo: "head" });
+          tags.push({ tag: "link", attrs: { rel: "apple-touch-icon", href: "/favicon.png" }, injectTo: "head" });
         }
         if (title) {
           tags.push({

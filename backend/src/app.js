@@ -50,15 +50,32 @@ export function buildApp(config) {
   });
   const proposalService = createProposalService({ client, config, store });
 
+  const isAllowedOrigin = (orig) => {
+    if (!orig) return false;
+    if (config.allowedOrigins.includes('*')) return true;
+    if (config.allowedOrigins.includes(orig)) return true;
+    try {
+      const hostname = new URL(orig).hostname;
+      if (
+        hostname.endsWith('.pages.dev') ||
+        hostname.endsWith('.ngrok-free.app') ||
+        hostname.endsWith('.trycloudflare.com')
+      ) {
+        return true;
+      }
+    } catch {}
+    return false;
+  };
+
   app.addHook('onRequest', async (request, reply) => {
     const origin = request.headers.origin;
-    if (origin && config.allowedOrigins.includes(origin)) {
+    if (origin && isAllowedOrigin(origin)) {
       reply.header('access-control-allow-origin', origin);
       reply.header('vary', 'Origin');
       reply.header('access-control-allow-credentials', 'false');
     }
     if (request.method === 'OPTIONS') {
-      if (origin && !config.allowedOrigins.includes(origin)) {
+      if (origin && !isAllowedOrigin(origin)) {
         return reply.code(403).send();
       }
       reply
@@ -95,6 +112,12 @@ export function buildApp(config) {
         requestId: request.id,
       },
     });
+  });
+
+  app.post('/v1/reset', async () => {
+    store.proposals.clear();
+    store.activeBySafeNonce.clear();
+    return { reset: true, message: 'All active proposal locks cleared' };
   });
 
   app.get('/health', async (_request, reply) => {

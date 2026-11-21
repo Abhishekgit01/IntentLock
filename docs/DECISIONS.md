@@ -100,3 +100,12 @@ For each decision change, add the reason, affected interfaces/contracts/fixtures
 - **Reason**: The first Orchard attempt mined the Safe singleton and proxy factory but `createProxyWithNonce(..., 1)` reverted with `Create2 call failed`. The predicted proxy for salt nonce 1 was not a valid Quai zone address.
 - **Changes**: Compute the SafeProxy CREATE2 address locally from the exact factory, initializer, singleton, and SafeProxy creation bytecode; choose and record a salt nonce whose address resolves to Cyprus-1 and is not a Qi address. No Safe ABI or transaction semantics change.
 - **Review**: Must verify the prediction against the emitted `ProxyCreation` address on Orchard after the retry.
+
+#### Change 2026-11-21: D-038 to D-044 Production CLI Build Decisions
+- **D-038 (CLI distribution)**: Signed package release with provenance; binary distribution only if reproducible. Owner: Build owner.
+- **D-039 (Production signer integration)**: Company-managed HSM/KMS or dedicated signer service; raw key files restricted to local development mode only. Owner: Verifier lead.
+- **D-040 (Backend tenancy and authentication)**: Company-operated isolated deployment with strong identity and role-based access. Owner: App/integration owner.
+- **D-041 (Production network support)**: Explicit allowlist per release (`anvil-local` 31337, `orchard-cyprus1` 15000); no arbitrary unreviewed RPC endpoints permitted for signing or broadcast. Owner: Protocol lead.
+- **D-042 (Audit retention)**: Organization-controlled durable event/evidence store with retention policy and cryptographic manifest linking. Owner: Evidence owner.
+- **D-043 (Policy activation)**: Governed Safe/Registry transaction with multi-party approval; CLI policy compile is strictly offline and never activates policy on-chain implicitly. Owner: Contracts lead.
+- **D-044 (Support telemetry)**: Opt-in, redacted diagnostics only; never export calldata or sensitive operational metadata by default. Owner: Project lead.

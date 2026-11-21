@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "intentlock.evidence.v1",
+  "proposalId": "0x59ecf8538ab9602611817700436714ec396468c697e2b48ce608f57d7c3669d6",
+  "exportedAt": "2026-11-21T04:16:19.663Z",
+  "profile": "anvil-local",
+  "chainId": 31337,
+  "proposal": {
+    "proposalId": "0x59ecf8538ab9602611817700436714ec396468c697e2b48ce608f57d7c3669d6",
+    "scenarioId": "proposal-59ecf853",
+    "fixtureId": null,
+    "demoScene": null,
+    "safeVersion": "1.4.1",
+    "transaction": {
+      "chainId": 31337,
+      "safe": "0x67f2Cd72901b066233E8aEc8e832B9eC8f5DD56B",
+      "safeNonce": "2",
+      "to": "0x71c7656eC7ab88b098DeFB751b7401b5f6d8E4a1",
+      "value": "1",
+      "data": "0x",
+      "operation": 0,
+      "safeTxGas": "0",
+      "baseGas": "0",
+      "gasPrice": "0",
+      "gasToken": "0x0000000000000000000000000000000000000000",
+      "refundReceiver": "0x0000000000000000000000000000000000000000"
+    },
+    "safeTxHash": "0xe9c79e77b8417bb063b94b502fa0396c2048a4188ad1c20db5ac55512ca85874",
+    "declaredMetadata": {
+      "label": "CLI Proposal"
+    },
+    "decoded": {
+      "decodeStatus": "SUPPORTED",
+      "decision": "ATTEST",
+      "workflowStatus": "AWAITING_THRESHOLD",
+      "policyClass": 1,
+      "reasonCode": null,
+      "summary": "Transfer 1 wei of native currency to 0x71c7656eC7ab88b098DeFB751b7401b5f6d8E4a1.",
+      "intent": {
+        "schemaVersion": 1,
+        "safeNonce": "2",
+        "safeTxHash": "0xe9c79e77b8417bb063b94b502fa0396c2048a4188ad1c20db5ac55512ca85874",
+        "operation": 0,
+        "policyClass": 1,
+        "targetCodeHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "resolvedImplementation": "0x0000000000000000000000000000000000000000",
+        "implementationCodeHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "policyHash": "0x7dad8009dda04299425de2615d48d06a6c20011e5ce0c5a4029d7a00c59a5643",
+        "actions": [
+          {
+            "kind": "0x40942806f5ef484e36a9085f810cb277926e0e0a941650a19e994a4e3a257609",
+            "target": "0x71c7656eC7ab88b098DeFB751b7401b5f6d8E4a1",
+            "asset": "0x0000000000000000000000000000000000000000",
+            "counterparty": "0x71c7656eC7ab88b098DeFB751b7401b5f6d8E4a1",
+            "amount": "1",
+            "effects": [
+              "decrease.safe.native:1",
+              "increase.0x71c7656ec7ab88b098defb751b7401b5f6d8e4a1.native:1"
+            ]
+          }
+        ]
+      },
+      "intentHash": "0xdb05cfd8f083b49c7706b6818d324920fdfa0acca769c069b0fed38e8e0b0e9b",
+      "targetCodeHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "source": {
+        "blockNumber": "11",
+        "blockHash": "0xd39cc51d42032618b426037fee72db98746c848aa43555c27cc384e1ef53c35b"
+      }
+    },
+    "decision": "ATTEST",
+    "workflowStatus": "APPROVED",
+    "verifier": {
+      "threshold": 2,
+      "validSignerCount": 2,
+      "signers": [
+        "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
+        "0x90f79bf6eb2c4f870365e785982e1f101e93b906"
+      ],
+      "thresholdMet": true,
+      "state": "THRESHOLD_MET_OFFCHAIN"
+    },
+    "execution": {
+      "attemptedOnchain": false,
+      "readyForExecution": false,
+      "gate": "REGISTRY_SUBMISSION_NOT_IMPLEMENTED",
+      "transactionHash": null,
+      "observedRevert": null
+    },
+    "source": {
+      "kind": "api_and_rpc_read",
+      "blockNumber": "11",
+      "blockHash": "0xd39cc51d42032618b426037fee72db98746c848aa43555c27cc384e1ef53c35b"
+    },
+    "eventsUrl": "/v1/proposals/0x59ecf8538ab9602611817700436714ec396468c697e2b48ce608f57d7c3669d6/events"
+  }
+}

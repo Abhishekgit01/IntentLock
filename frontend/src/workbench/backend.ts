@@ -1,4 +1,20 @@
-const API_ROOT = (import.meta.env.VITE_INTENTLOCK_API_URL || "/api").replace(/\/$/, "");
+export function getApiRoot(): string {
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    const queryApi = params.get("api");
+    if (queryApi) {
+      try {
+        window.localStorage?.setItem("INTENTLOCK_API_URL", queryApi);
+      } catch {}
+      return queryApi.replace(/\/$/, "");
+    }
+    try {
+      const stored = window.localStorage?.getItem("INTENTLOCK_API_URL");
+      if (stored) return stored.replace(/\/$/, "");
+    } catch {}
+  }
+  return (import.meta.env.VITE_INTENTLOCK_API_URL || "/api").replace(/\/$/, "");
+}
 
 export interface BackendHealth {
   status: string;
@@ -104,7 +120,7 @@ export interface LiveProposal {
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_ROOT}${path}`, {
+  const response = await fetch(`${getApiRoot()}${path}`, {
     ...init,
     headers: { ...(init?.body ? { "content-type": "application/json" } : {}), ...init?.headers },
   });
@@ -134,7 +150,7 @@ export function subscribeToProposal(
   onEvent: (event: ApiEvent) => void,
   onError: () => void,
 ) {
-  const url = `${API_ROOT}${proposal.eventsUrl}`;
+  const url = `${getApiRoot()}${proposal.eventsUrl}`;
   const stream = new EventSource(url);
   const names = [
     "proposal.created",

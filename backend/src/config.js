@@ -188,6 +188,7 @@ export function loadConfig(env = process.env) {
     .map((origin) => origin.trim())
     .filter(Boolean);
   for (const origin of allowedOrigins) {
+    if (origin === '*') continue;
     const parsed = new URL(origin);
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       throw new Error('ALLOWED_ORIGINS entries must use HTTP or HTTPS');
