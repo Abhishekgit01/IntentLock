@@ -15,7 +15,7 @@ export default function Home() {
       <section className="relative overflow-hidden">
         <div aria-hidden className="float-a absolute -left-24 top-7 size-72 rounded-full bg-flame/15" />
         <div aria-hidden className="float-b absolute right-[-6rem] top-[24rem] size-56 rounded-full border-[14px] border-flame/25" />
-        <div className="relative mx-auto grid max-w-[1280px] items-center gap-12 px-5 pb-24 pt-12 md:px-10 md:pt-14 lg:grid-cols-12">
+        <div className="relative mx-auto grid max-w-[1280px] items-center gap-12 px-5 pb-28 pt-28 md:px-10 md:pt-32 lg:grid-cols-12">
           <div className="lg:col-span-7">
             <Headline
               parts={[{ t: 'Your signers clicked' }, { t: 'Confirm.', hl: true }, { t: 'The screen lied.', em: true, br: true }]}
@@ -54,7 +54,7 @@ export default function Home() {
               </div>
             </Reveal>
           </div>
-          <div className="relative lg:col-span-5 lg:-translate-y-16">
+          <div className="relative lg:col-span-5 lg:-translate-y-20">
             <Reveal delay={0.25} y={32} scale={0.96}>
               <Tilt>
                 <SafeBoundary label="The verifier globe">
