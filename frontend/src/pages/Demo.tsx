@@ -236,6 +236,32 @@ function ChainCard() {
             )
           })}
         </ol>
+
+        {/* Automated AI Plain English Security Analysis Card */}
+        <div className="mt-5 rounded-2xl border-2 border-flame/40 bg-flame/10 p-4 text-on-contrast">
+          <div className="flex items-center justify-between gap-2 font-mono text-[11px] font-bold uppercase tracking-wider text-flame">
+            <span className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-flame animate-pulse" />
+              Automated Plain English Security Analysis
+            </span>
+            <span className="rounded-full border border-flame/50 bg-flame/20 px-2 py-0.5 text-[9.5px]">
+              Offline AI · pai:latest
+            </span>
+          </div>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-on-contrast">
+            {state.scenario === 'attack'
+              ? 'The signer screen displays a routine 0.1 ETH transfer to cold storage, but the raw calldata contains a hidden DELEGATECALL to an unverified proxy. This delegatecall grants the attacker complete execution control over the Safe vault, allowing them to overwrite owners and drain all assets. IntentLock Guard detected the delegatecall and blocked execution.'
+              : state.scenario === 'legit'
+                ? 'The transaction is a verified native transfer of 10 QUAI to an allowlisted cold storage address. Two independent verifiers confirmed the calldata matches company policy, and the on-chain Guard permits safe execution.'
+                : 'Unguarded wallet simulation: Without IntentLock Guard attached, the Safe executes the raw delegatecall directly, resulting in catastrophic loss of vault ownership.'}
+          </p>
+          <div className="mt-2.5 rounded-lg border border-on-contrast/15 bg-on-contrast/5 px-3 py-1.5 font-mono text-xs text-on-contrast/80">
+            <span className="font-bold text-flame">Intent vs Calldata: </span>
+            {state.scenario === 'attack'
+              ? 'Screen claimed 0.1 ETH cold transfer · Raw bytecode attempted root-level contract execution.'
+              : 'Calldata strictly matches declared intent within authorized spending limits.'}
+          </div>
+        </div>
       </div>
       <p className="mt-4 text-sm text-on-contrast/70">
         {state.guardEnabled ? 'What each verifier derives independently from the raw transaction.' : 'In this scenario nobody decodes this, so no one sees it before it runs.'}

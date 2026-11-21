@@ -1,7 +1,7 @@
 import { lazy, Suspense, useRef, type KeyboardEvent } from "react";
 import { Link } from "react-router";
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import { SHELL, type ActId } from "./story";
 import Attack from "./acts/Attack";
 import Proof from "./acts/Proof";
@@ -18,6 +18,7 @@ const Loading = () => (
 
 export default function WorkbenchShell() {
   const [act, setAct] = useState<ActId>("defense");
+  const [headerVisible, setHeaderVisible] = useState(true);
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   function onKey(e: KeyboardEvent, i: number) {
@@ -45,45 +46,71 @@ export default function WorkbenchShell() {
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col bg-[#070605] text-[#F5EEDF]">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[#2a241d] bg-[#0b0a08] px-3 sm:px-4">
-        {act !== "defense" ? (
-          <Link
-            to="/demo"
-            aria-label={SHELL.backLabel}
-            className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#3a332b] px-2.5 py-1.5 text-sm font-semibold hover:border-[#FF5B14] sm:px-3"
-          >
-            <ArrowLeft className="size-4" aria-hidden />
-            <span className="hidden sm:inline">{SHELL.backLabel}</span>
-          </Link>
-        ) : null}
-        <div
-          role="tablist"
-          aria-label={SHELL.tablistLabel}
-          className="mx-auto flex min-w-0 gap-0 sm:gap-1 overflow-x-auto rounded-full border border-[#3a332b] bg-[#100e0b] p-1 [scrollbar-width:none]"
+      {!headerVisible && (
+        <button
+          type="button"
+          onClick={() => setHeaderVisible(true)}
+          className="absolute left-1/2 top-2 z-[90] -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full border border-[#FF5B14]/60 bg-[#0e0c0a]/90 px-3 py-1 font-mono text-xs font-bold text-[#FF5B14] shadow-lg backdrop-blur hover:bg-[#FF5B14] hover:text-[#120f0c]"
+          title="Restore top navigation"
         >
-          {SHELL.acts.map((a, i) => (
-            <button
-              key={a.id}
-              ref={(el) => {
-                refs.current[a.id] = el;
-              }}
-              role="tab"
-              id={`act-tab-${a.id}`}
-              aria-selected={act === a.id}
-              aria-controls="act-panel"
-              tabIndex={act === a.id ? 0 : -1}
-              onClick={() => setAct(a.id)}
-              onKeyDown={(e) => onKey(e, i)}
-              className={`shrink-0 whitespace-nowrap rounded-full px-2 py-1.5 font-display text-[12px] font-extrabold uppercase tracking-tight transition-colors sm:px-5 sm:text-sm ${
-                act === a.id ? "bg-[#FF5B14] text-[#120f0c]" : "text-[#c9c0b0] hover:text-[#F5EEDF]"
-              }`}
-            >
-              {a.label}
-            </button>
-          ))}
-        </div>
-        <span aria-hidden className="hidden w-[7.5rem] shrink-0 sm:block" />
-      </header>
+          <ChevronDown className="size-3.5" aria-hidden />
+          <span>Show Navbars</span>
+        </button>
+      )}
+
+      {headerVisible && (
+        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[#2a241d] bg-[#0b0a08] px-3 sm:px-4">
+          <div className="flex items-center gap-3">
+            {act !== "defense" ? (
+              <Link
+                to="/demo"
+                aria-label={SHELL.backLabel}
+                className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#3a332b] px-2.5 py-1.5 text-sm font-semibold hover:border-[#FF5B14] sm:px-3"
+              >
+                <ArrowLeft className="size-4" aria-hidden />
+                <span className="hidden sm:inline">{SHELL.backLabel}</span>
+              </Link>
+            ) : null}
+          </div>
+
+          <div
+            role="tablist"
+            aria-label={SHELL.tablistLabel}
+            className="flex min-w-0 gap-0 overflow-x-auto rounded-full border border-[#3a332b] bg-[#100e0b] p-1 [scrollbar-width:none] sm:gap-1"
+          >
+            {SHELL.acts.map((a, i) => (
+              <button
+                key={a.id}
+                ref={(el) => {
+                  refs.current[a.id] = el;
+                }}
+                role="tab"
+                id={`act-tab-${a.id}`}
+                aria-selected={act === a.id}
+                aria-controls="act-panel"
+                tabIndex={act === a.id ? 0 : -1}
+                onClick={() => setAct(a.id)}
+                onKeyDown={(e) => onKey(e, i)}
+                className={`shrink-0 whitespace-nowrap rounded-full px-2 py-1.5 font-display text-[12px] font-extrabold uppercase tracking-tight transition-colors sm:px-5 sm:text-sm ${
+                  act === a.id ? "bg-[#FF5B14] text-[#120f0c]" : "text-[#c9c0b0] hover:text-[#F5EEDF]"
+                }`}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setHeaderVisible(false)}
+            title="Collapse top navigation"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#3a332b] px-3 py-1 font-mono text-xs font-bold text-[#a89f90] hover:border-[#FF5B14] hover:text-[#FF5B14]"
+          >
+            <ChevronUp className="size-3.5" aria-hidden />
+            <span className="hidden sm:inline">Hide Header</span>
+          </button>
+        </header>
+      )}
 
       {SHELL.noticeActs.includes(act) && (
         <ul

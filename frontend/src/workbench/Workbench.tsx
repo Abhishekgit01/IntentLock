@@ -1,7 +1,7 @@
 import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, MonitorOff, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { ArrowLeft, Bot, EyeOff, MonitorOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { STAMP_TEXT, TOUR, type InspectorTab, type StampKind } from "./scenes";
 import { useWorkbench } from "./useWorkbench";
 import { Panel } from "./Panel";
@@ -94,6 +94,8 @@ export default function Workbench() {
   const wb = useWorkbench();
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [aiCardOpen, setAiCardOpen] = useState(true);
   const [tab, setTab] = useState<InspectorTab>("Timeline");
   useEffect(() => {
     setWebgl(detectWebGL());
@@ -202,6 +204,20 @@ export default function Workbench() {
               </ul>
               <button
                 type="button"
+                onClick={() => setPanelOpen((o) => !o)}
+                aria-expanded={panelOpen}
+                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[#3a332b] bg-[#0e0c0a]/85 px-3.5 py-1.5 text-xs font-bold text-[#d8cfbf] backdrop-blur hover:border-[#FF5B14] hover:text-[#FF5B14]"
+                title="Toggle controls panel"
+              >
+                {panelOpen ? (
+                  <PanelLeftClose className="size-3.5" aria-hidden />
+                ) : (
+                  <PanelLeftOpen className="size-3.5" aria-hidden />
+                )}
+                <span>{panelOpen ? "Hide Controls" : "Show Controls"}</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setInspectorOpen((o) => !o)}
                 aria-expanded={inspectorOpen}
                 className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-[#FF5B14] bg-[#0e0c0a]/85 px-4 py-1.5 text-sm font-bold text-[#FF5B14] backdrop-blur hover:bg-[#FF5B14] hover:text-[#120f0c]"
@@ -214,6 +230,56 @@ export default function Workbench() {
                 Inspector
               </button>
             </div>
+          </div>
+
+          {/* Floating AI Plain-English Security Explainer Widget */}
+          <div className="pointer-events-auto absolute left-4 top-16 z-20 max-w-sm">
+            {aiCardOpen ? (
+              <div className="rounded-2xl border-2 border-[#FF5B14]/40 bg-[#0e0c0a]/92 p-4 text-left shadow-2xl backdrop-blur-md">
+                <div className="flex items-center justify-between gap-2 border-b border-[#2f2922] pb-2.5">
+                  <span className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5B14]">
+                    <span className="size-2 rounded-full bg-[#FF5B14] animate-pulse" />
+                    AI Security Intelligence
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="rounded-full border border-[#FF5B14]/30 bg-[#FF5B14]/10 px-2 py-0.5 font-mono text-[9px] font-bold text-[#FF5B14]">
+                      Offline pai:latest
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAiCardOpen(false)}
+                      className="rounded-full p-1 text-[#a89f90] hover:text-[#F5EEDF]"
+                      title="Minimize AI Explainer"
+                    >
+                      <EyeOff className="size-3.5" aria-hidden />
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-2.5 text-[12px] font-medium leading-relaxed text-[#F5EEDF]">
+                  {wb.liveBackend.proposal?.explanation?.summary ||
+                    (wb.payload.operation === "DELEGATECALL"
+                      ? "DELEGATECALL EXPLOIT: The interface claimed a routine 0.1 ETH transfer to a cold wallet, but raw calldata executed a hidden DELEGATECALL. Delegatecall gives the target contract root access to rewrite Safe ownership and drain all vault assets. IntentLock Guard detected this deviation and blocked execution."
+                      : "VERIFIED SAFE: Transaction calldata strictly adheres to the Safe's pre-approved security policy. Independent verifiers validated the parameters and permitted on-chain execution.")}
+                </p>
+                <div className="mt-2.5 rounded-lg border border-[#2f2922] bg-[#14110e] px-2.5 py-1.5 font-mono text-[10.5px] text-[#a89f90]">
+                  <span className="font-bold text-[#FF5B14]">Intent vs Calldata: </span>
+                  {wb.liveBackend.proposal?.explanation?.intentVsCalldata ||
+                    (wb.payload.operation === "DELEGATECALL"
+                      ? "UI claimed 0.1 ETH cold transfer · Raw bytes attempted root contract takeover."
+                      : "Calldata matches declared policy parameters.")}
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAiCardOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-[#FF5B14]/50 bg-[#0e0c0a]/90 px-3 py-1.5 font-mono text-xs font-bold text-[#FF5B14] shadow-lg backdrop-blur hover:bg-[#FF5B14] hover:text-[#120f0c]"
+                title="Expand AI Security Explainer"
+              >
+                <Bot className="size-4" aria-hidden />
+                <span>AI Security Explainer</span>
+              </button>
+            )}
           </div>
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 lg:p-6">
@@ -261,12 +327,14 @@ export default function Workbench() {
         )}
       </div>
 
-      <aside
-        aria-label="Workbench controls"
-        className="order-2 w-full shrink-0 border-t border-[#2a241d] bg-[#0b0a08] lg:w-[360px] lg:overflow-y-auto lg:border-l lg:border-t-0"
-      >
-        <Panel wb={wb} />
-      </aside>
+      {panelOpen && (
+        <aside
+          aria-label="Workbench controls"
+          className="order-2 w-full shrink-0 border-t border-[#2a241d] bg-[#0b0a08] lg:w-[360px] lg:overflow-y-auto lg:border-l lg:border-t-0"
+        >
+          <Panel wb={wb} />
+        </aside>
+      )}
 
       {/* stacked inspector for narrow screens */}
       {inspectorOpen && (
