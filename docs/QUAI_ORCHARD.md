@@ -2,9 +2,9 @@
 
 This document tracks the sponsor-required Quai integration. The existing Anvil deployment and tests remain the deterministic development path. Orchard Cyprus-1 is a separate test deployment target; it is not production, and no public-chain action is implicit in these instructions.
 
-**Status checked 2026-11-21:** The Safe 1.4.1 singleton, Safe proxy factory, Safe proxy, IntentLock Registry, and IntentLock Guard have been deployed on Orchard Cyprus-1. All seven deployment/configuration receipts have status `1`. Earlier read-only RPC checks confirmed chain ID `15000`, deployed code at the five contract addresses, the Safe's installed guard, the Registry's guard and policy hash, the `2-of-3` verifier threshold, one Safe owner, and no enabled modules. The currently available RPC attempt is timing out, so those reads have not been freshly repeated in this session. Observed addresses, code hashes, configuration, and receipts are in [`deployments/quai-orchard-cyprus1.json`](../deployments/quai-orchard-cyprus1.json).
+**Status checked 2026-11-21:** The Safe 1.4.1 singleton, Safe proxy factory, Safe proxy, IntentLock Registry, and IntentLock Guard are deployed on Orchard Cyprus-1. All seven deployment/configuration receipts have status `1`. A fresh read-only preflight returned chain ID `15000` at block `8308034`. The Orchard-configured backend then returned `ready`, observed chain ID `15000`, Safe nonce `1`, Safe balance `0`, the expected Safe proxy code hash, one Safe owner, threshold `1`, the installed guard, and zero enabled modules at block `8308052`. Its reported policy hash matches the deployment manifest. Observed addresses, code hashes, configuration, and deployment receipts are in [`deployments/quai-orchard-cyprus1.json`](../deployments/quai-orchard-cyprus1.json).
 
-This is **not yet a complete live product integration**. Quaiscan accepted Standard JSON verification submissions for the five deployed contract addresses, but source publication has not been confirmed; the manifest records `submitted_pending_confirmation`. The explorer API could not be reached for a fresh status check in this session. The backend now has an Orchard adapter, but a benign transfer and a denied transaction have not been exercised through the verifier-to-Safe path on Orchard.
+This is **not yet a complete live product integration**. Quaiscan accepted Standard JSON verification submissions for the five deployed contract addresses, but the latest address API reads did not confirm published source; the manifest records `submitted_not_confirmed`. The backend's live read adapter has been exercised successfully. A benign transfer and a denied transaction have not been exercised through the verifier-to-Safe path on Orchard.
 
 ## Network verified from official docs
 
@@ -73,7 +73,7 @@ Fund only the dedicated testnet account through the official faucet. Never put w
 
 The script writes a separate manifest to `deployments/quai-orchard-cyprus1.json` only after deployment transactions have receipts. The manifest must include the observed chain ID, block number, transaction hashes, deployed addresses, runtime code hashes, Safe version/source revision, verifier set/threshold, and policy hash. A missing receipt or failed post-deploy assertion aborts; it must not create a success manifest.
 
-The pinned `quais` SDK release also requires a 46-character `IPFSHash` argument when `ContractFactory.deploy()` runs. The deployment script passes the authentic compiler metadata CID extracted from each artifact's Solidity CBOR footer; this is not evidence that the metadata was uploaded or pinned. The manifest records these as `compilerMetadataCids`. Source verification remains `not_checked` until the artifact is submitted through Quaiscan's Solidity Standard JSON flow and the result is observed.
+The pinned `quais` SDK release also requires a 46-character `IPFSHash` argument when `ContractFactory.deploy()` runs. The deployment script passes the authentic compiler metadata CID extracted from each artifact's Solidity CBOR footer; this is not evidence that the metadata was uploaded or pinned. The manifest records these as `compilerMetadataCids`. Standard JSON source verification was submitted, but the latest Quaiscan address API reads did not confirm publication.
 
 ### Deployment and live-demo status
 
@@ -82,13 +82,13 @@ Deployment evidence is present for the contract deployments and initial configur
 The following remains before calling the **full Orchard demo** verified:
 
 1. Poll Quaiscan for the five submitted Standard JSON verifications and confirm the source is published at each deployed address. Update `explorerVerification` only after Quaiscan confirms the source.
-2. A Quai RPC adapter and explicit Orchard server scripts are now implemented in `backend/src/quai-chain.js` and `backend/package.json`. The adapter has not passed a live RPC check in this session because the RPC request timed out. Its reads and sends must be validated against Cyprus-1 before the full integration is called working.
-3. Configure the separate ignored `backend/.env.quai` from the deployment manifest with the matching policy and verifier set. Generate or select a dedicated Orchard relayer key and keep all signer keys local. Confirm configured public addresses against chain reads.
-4. Fund the dedicated relayer and Safe with only the small amount needed for one benign test transfer and gas.
-5. Run an allowed transfer through two independent verifier signatures, on-chain Registry submission, Safe-owner signature, and Safe execution. Record actual receipts and balance changes.
+2. The Quais adapter in `backend/src/quai-chain.js` and Orchard commands in `backend/package.json` have passed live, read-only RPC checks. Its transaction-submit path still needs a successful contract execution before it can be treated as end-to-end validated.
+3. The ignored local `backend/.env.quai` is configured with the manifest's policy, addresses, and verifier set. A dedicated local relayer has been funded with `0.03 QUAI`; signing keys remain in ignored local files. The broadcast gate is blank, so backend execution is disabled.
+4. The Safe remains at `0 QUAI`. Two small same-zone transfers from the existing Safe owner to the Safe proxy were mined with failed receipts (blocks `8308013` and `8308019`); neither changed the Safe balance. The latest failed receipt is `0x006c00483d1d5c93a58955551e8df171b5c295f7b800f01285f1a352b37ba429`. Its receipt reports status `0`, while a direct zone-endpoint `debug_traceTransaction` response reports `failed: false` and Quaiscan reports `status: error`, `result: awaiting_internal_transactions`. This discrepancy needs explanation from Quai before sending more top-ups or turning on backend broadcasts.
+5. After resolving that receipt discrepancy and funding the Safe, run an allowed transfer through two independent verifier signatures, on-chain Registry submission, Safe-owner signature, and Safe execution. Record actual receipts and balance changes.
 6. Run a denied or missing-attestation transaction and record its mined failed receipt and observed guard error. Do not use local Anvil results as Orchard evidence.
 
-The manifest's top-level `observedBlockNumber` was read from the SDK's default shard instead of Cyprus-1. It is cleared until the Cyprus-1 height can be freshly read; per-transaction deployment block numbers remain recorded from the confirmed receipts. The preflight script now explicitly requests the Cyprus-1 shard.
+The manifest's top-level `observedBlockNumber` is now a fresh Cyprus-1 observation (`8308052`); deployment transaction block numbers remain separately recorded from their confirmed receipts. The preflight script explicitly requests the Cyprus-1 shard.
 
 Keep local Anvil test results labeled as local; they are not Quai execution evidence. Explorer verification is a separate status and is only complete after checking it on Quaiscan.
 

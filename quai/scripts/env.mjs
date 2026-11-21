@@ -8,7 +8,7 @@ export const quaiDir = path.resolve(
 );
 export const repositoryRoot = path.resolve(quaiDir, "..");
 
-export function loadQuaiEnv() {
+export function loadQuaiEnv({ includePrivateKeys = true } = {}) {
   const file = path.join(quaiDir, ".env.quai");
   let contents = "";
   try {
@@ -27,6 +27,7 @@ export function loadQuaiEnv() {
     const value = line.slice(separator + 1).trim();
     if (!/^[A-Z][A-Z0-9_]*$/.test(key))
       throw new Error("Invalid key in .env.quai.");
+    if (!includePrivateKeys && /(?:^|_)PRIVATE_KEY$/.test(key)) continue;
     if (process.env[key] === undefined) process.env[key] = value;
   }
 }

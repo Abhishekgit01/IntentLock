@@ -3,8 +3,8 @@
   "network": "Quai Orchard Cyprus-1",
   "chainId": 15000,
   "rpcEndpoint": "https://orchard.rpc.quai.network",
-  "observedBlockNumber": null,
-  "observedBlockNumberStatus": "not_recaptured_on_cyprus1",
+  "observedBlockNumber": 8308052,
+  "observedBlockNumberStatus": "captured_from_cyprus1_rpc",
   "compiler": "0.8.19",
   "evmVersion": "london",
   "safeVersion": "1.4.1",
@@ -27,9 +27,7 @@
     "schemaVersion": 1,
     "native": {
       "maxTransferWei": "100000000000000000000",
-      "allowedRecipients": [
-        "0x00357c4b4f456f7015a73770e5587263f72b49fc"
-      ]
+      "allowedRecipients": ["0x00357c4b4f456f7015a73770e5587263f72b49fc"]
     },
     "erc20": {
       "maxTransferBaseUnits": "0",
@@ -113,13 +111,11 @@
     "registryOwner": "0x0029c1dA8b518f6fDa2e71af153c18f0401e250b",
     "registryGuard": "0x00259AE951b71FDE20D05Bff94b93d66c5e48c2d",
     "safeGuard": "0x00259AE951b71FDE20D05Bff94b93d66c5e48c2d",
-    "safeOwners": [
-      "0x0029c1dA8b518f6fDa2e71af153c18f0401e250b"
-    ],
+    "safeOwners": ["0x0029c1dA8b518f6fDa2e71af153c18f0401e250b"],
     "safeThreshold": 1,
     "enabledModules": [],
     "safeNonce": 1,
     "guardInstalledEventObserved": true
   },
-  "explorerVerification": "submitted_pending_confirmation"
+  "explorerVerification": "submitted_not_confirmed"
 }

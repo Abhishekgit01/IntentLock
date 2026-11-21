@@ -129,7 +129,10 @@ export function createQuaiChainClient(config) {
       if (typeof method !== 'function') {
         throw new Error(`Contract ABI has no ${functionName} method`);
       }
-      const overrides = gas === undefined ? {} : { gasLimit: BigInt(gas) };
+      const overrides = {
+        from: wallet.address,
+        ...(gas === undefined ? {} : { gasLimit: BigInt(gas) }),
+      };
       const transaction = await method(...args, overrides);
       return transaction.hash;
     },

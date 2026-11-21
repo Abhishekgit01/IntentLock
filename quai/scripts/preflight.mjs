@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { assertOrchardRpcUrl, loadQuaiEnv } from "./env.mjs";
 
 export async function orchardPreflight() {
-  loadQuaiEnv();
+  loadQuaiEnv({ includePrivateKeys: false });
   const endpoint = assertOrchardRpcUrl(
     process.env.QUAI_RPC_URL || "https://orchard.rpc.quai.network",
   );

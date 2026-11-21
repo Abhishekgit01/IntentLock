@@ -6,6 +6,7 @@
 *.intentlock-key
 *.intentlock-pq-key
 .intentlock-hybrid/
+.local-keys/
 
 # JavaScript dependencies and generated builds
 node_modules/

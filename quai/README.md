@@ -4,9 +4,9 @@ This package builds and deploys the existing IntentLock contracts to Quai Orchar
 
 ## Current status
 
-The Safe 1.4.1 singleton, Safe proxy factory, Safe proxy, IntentLock Registry, and IntentLock Guard are deployed. All seven deployment/configuration receipts and the read-back state are recorded in [`../deployments/quai-orchard-cyprus1.json`](../deployments/quai-orchard-cyprus1.json). Quaiscan source verification is still marked `not_checked`.
+The Safe 1.4.1 singleton, Safe proxy factory, Safe proxy, IntentLock Registry, and IntentLock Guard are deployed. All seven deployment/configuration receipts and the read-back state are recorded in [`../deployments/quai-orchard-cyprus1.json`](../deployments/quai-orchard-cyprus1.json). Live read-only backend health/context checks have succeeded against Orchard Cyprus-1. Quaiscan source verification submissions remain unconfirmed.
 
-The backend execution adapter remains local-Anvil-only. Do not set `CHAIN_ID=15000` and assume it will execute on Quai. A live verifier-to-Safe transaction has not been tested on Orchard.
+The backend now has an Orchard execution adapter, but a live verifier-to-Safe transaction has not been completed. The backend reports execution disabled unless `ALLOW_QUAI_BROADCAST=YES`; leave that gate disabled until the failed native transfer into the Safe is explained and the small Safe balance is confirmed on-chain. See [`../docs/QUAI_ORCHARD.md`](../docs/QUAI_ORCHARD.md) for current evidence and the exact remaining checks.
 
 ## Build and read-only commands
 

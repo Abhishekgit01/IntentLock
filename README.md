@@ -14,7 +14,7 @@ Unknown or ambiguous transactions fail closed. The current decoder supports nati
 | --- | --- |
 | Local development | Backend and frontend can use a local Anvil chain (`31337`). The UI's scripted story scenes are explicitly labeled synthetic. |
 | Orchard deployment | Safe, Registry, and Guard are deployed on Quai Orchard Cyprus-1. Deployment and configuration receipts are recorded in the [manifest](deployments/quai-orchard-cyprus1.json). |
-| Orchard backend | A path-aware Quais adapter and gated server commands are implemented. The latest Orchard RPC preflight timed out; live reads and a verifier-to-Safe transaction have not been confirmed end to end. |
+| Orchard backend | The path-aware Quais adapter is reading live Cyprus-1 state. The configured backend reports chain ID `15000`, the deployed Safe/guard/owners/modules, and the manifest-matching policy hash. A verifier-to-Safe execution has not been completed; the Safe currently has no QUAI balance and attempted top-ups have failed. |
 | Quaiscan source | Standard JSON verification requests were submitted for the deployed contracts. Source publication is pending confirmation. |
 | Security review | Prototype only. The contracts and system have not been independently audited. |
 
@@ -186,7 +186,7 @@ npm run policy:compile
 npm run preflight
 ```
 
-The preflight is read-only. The deploy script is gated and must not be rerun to inspect the existing deployment. The backend's Orchard broadcast path is disabled unless a local `backend/.env.quai` explicitly sets `ALLOW_QUAI_BROADCAST=YES`; configure a dedicated testnet relayer key and verify all addresses before enabling it. The Orchard RPC preflight and live verifier-to-Safe execution still require successful end-to-end validation. See [Quai Orchard status and instructions](docs/QUAI_ORCHARD.md).
+The preflight is read-only. The deploy script is gated and must not be rerun to inspect the existing deployment. The backend's Orchard broadcast path is disabled unless a local `backend/.env.quai` explicitly sets `ALLOW_QUAI_BROADCAST=YES`; configure a dedicated testnet relayer key and verify all addresses before enabling it. Live RPC reads work, but a verifier-to-Safe execution still requires end-to-end validation. See [Quai Orchard status and instructions](docs/QUAI_ORCHARD.md).
 
 ## Evidence and security boundaries
 
