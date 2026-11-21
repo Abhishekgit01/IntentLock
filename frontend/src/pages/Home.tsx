@@ -17,6 +17,12 @@ export default function Home() {
         <div aria-hidden className="float-b absolute right-[-6rem] top-[24rem] size-56 rounded-full border-[14px] border-flame/25" />
         <div className="relative mx-auto grid max-w-[1280px] items-center gap-12 px-5 pb-28 pt-24 md:px-10 md:pt-[6.5rem] lg:grid-cols-12">
           <div className="lg:col-span-7">
+            <div className="mb-6 inline-flex flex-wrap items-center gap-2 rounded-full border border-flame/40 bg-flame/10 px-4 py-1.5 text-xs font-mono font-bold uppercase tracking-wider text-flame">
+              <span className="size-2 rounded-full bg-flame animate-pulse" />
+              <span>Quai Orchard (Cyprus-1) Deployed</span>
+              <span className="opacity-50">·</span>
+              <span>Bybit $1.5B Attack Replay Verified (100% Blocked)</span>
+            </div>
             <Headline
               parts={[{ t: 'Your signers clicked' }, { t: 'Confirm.', hl: true }, { t: 'The screen lied.', em: true, br: true }]}
               className="display-type text-[clamp(2.85rem,6.3vw,5.75rem)]"
@@ -29,6 +35,17 @@ export default function Home() {
               <p className="mt-5 max-w-xl text-lg text-soft">
                 A harmless screen can hide a delegatecall. IntentLock makes the chain refuse to execute unless independent verifiers attested to the exact transaction.
               </p>
+              <div className="mt-4 flex flex-wrap gap-4 text-xs font-mono text-soft">
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-ok" /> 26/26 Adversarial Tests Passed
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-ok" /> Safe v1.4.1 Native Guard
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-ok" /> NIST ML-DSA-65 Post-Quantum
+                </span>
+              </div>
               <div className="mt-10 flex flex-wrap items-center gap-4">
                 <button type="button" className="btn btn-primary !px-8 !py-4 text-lg" onClick={() => runAttackFromAnywhere(run, navigate)}>
                   <Play className="size-5" aria-hidden fill="currentColor" />

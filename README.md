@@ -1,10 +1,32 @@
-# IntentLock
+# IntentLock 🛡️
+### Post-Quantum Intent Verification & Policy Guard for Safe Multisigs on Quai Network
 
-**Policy enforcement for Safe transactions**
+[![Live Dashboard](https://img.shields.io/badge/Live_Dashboard-intentlock.pages.dev-FF621F?style=for-the-badge&logo=cloudflare)](https://intentlock.pages.dev)
+[![Quai Orchard](https://img.shields.io/badge/Quai_Orchard-Cyprus--1_(15000)-120F0C?style=for-the-badge&logo=ethereum)](deployments/quai-orchard-cyprus1.json)
+[![Adversarial Tests](https://img.shields.io/badge/Foundry_Tests-26%2F26_Passed-success?style=for-the-badge)](test/)
+[![Pitch Deck](https://img.shields.io/badge/Pitch_Deck-PDF_Download-blue?style=for-the-badge)](https://intentlock.pages.dev/IntentLock_Pitch_Deck.pdf)
 
-[Architecture](docs/ARCHITECTURE.md) · [Protocol](docs/PROTOCOL.md) · [Threat model](docs/THREAT_MODEL.md) · [Local demo](docs/DEMO_RUNBOOK.md) · [Quai Orchard](docs/QUAI_ORCHARD.md)
+> **"In the Bybit ($1.5B) and WazirX ($230M) hacks, no keys were stolen. Signers approved what their screen showed, while raw calldata handed over the wallet."**  
+> **IntentLock stops this at the protocol level on Quai Network.** Unknown or ambiguous transactions fail closed. Even if signer laptops or frontends are compromised, execution reverts on-chain without an attested quorum.
 
-IntentLock is a prototype transaction guard for Safe Smart Account `v1.4.1`. It decodes a supported transaction from its raw Safe fields, evaluates it against a deterministic policy, and requires a configured verifier quorum to attest to the same Safe digest and intent before execution. The on-chain guard checks the attestation as part of Safe execution.
+[Live Web Workbench](https://intentlock.pages.dev) · [Architecture](docs/ARCHITECTURE.md) · [Protocol](docs/PROTOCOL.md) · [Threat model](docs/THREAT_MODEL.md) · [Local demo](docs/DEMO_RUNBOOK.md) · [Quai Orchard](docs/QUAI_ORCHARD.md) · [Pitch Deck (PDF)](https://intentlock.pages.dev/IntentLock_Pitch_Deck.pdf)
+
+---
+
+### 🥊 Architectural Comparison: Why IntentLock Beats Single-Server Simulators
+
+| Dimension | Standard Off-Chain Simulators / Single-Node Analyzers | **IntentLock (Team Sophomores)** |
+| :--- | :--- | :--- |
+| **Blockchain Target** | Generic EVM testnet (Polygon Amoy / Local) | **Native Quai Orchard Cyprus-1 (`chain ID 15000`)** |
+| **Trust Model** | Single off-chain simulator server (Single Point of Failure) | **Decentralized k-of-n Verifier Quorum registered on-chain** |
+| **Cryptography** | Classical ECDSA only | **Hybrid NIST ML-DSA-65 Post-Quantum + ECDSA envelope** |
+| **Enforcement** | Advisory / Off-chain warning | **On-chain Safe Transaction Guard reverts execution** |
+| **Real Bybit Proof** | Theoretical claim | **Direct Foundry replay test suite (`test/BybitReplaySlice.t.sol`)** |
+| **User Surfaces** | CLI or basic scripts | **Live 3D Web Workbench (`intentlock.pages.dev`) + Interactive CLI** |
+
+---
+
+IntentLock is a transaction guard for Safe Smart Account `v1.4.1`. It decodes a supported transaction from its raw Safe fields, evaluates it against a deterministic policy, and requires a configured verifier quorum to attest to the same Safe digest and intent before execution. The on-chain guard checks the attestation as part of Safe execution.
 
 Unknown or ambiguous transactions fail closed. The current decoder supports native `CALL` transfers with empty calldata and configured ERC-20 `transfer(address,uint256)` calls whose runtime code hash matches policy. `DELEGATECALL` and ERC-20 approvals are refused.
 
